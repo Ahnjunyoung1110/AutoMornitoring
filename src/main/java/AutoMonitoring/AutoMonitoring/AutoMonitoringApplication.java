@@ -1,13 +1,13 @@
-package AutoMornitoring.AutoMornitoring;
+package AutoMonitoring.AutoMonitoring;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class AutoMornitoringApplication {
+public class AutoMonitoringApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(AutoMornitoringApplication.class, args);
+		SpringApplication.run(AutoMonitoringApplication.class, args);
 	}
 
 }
