@@ -1,9 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.application;
 
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
-import AutoMonitoring.AutoMonitoring.domain.dto.ProbeDTO;
-import AutoMonitoring.AutoMonitoring.domain.dto.StreamDTO;
-import AutoMonitoring.AutoMonitoring.domain.dto.VariantDTO;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.StreamDTO;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

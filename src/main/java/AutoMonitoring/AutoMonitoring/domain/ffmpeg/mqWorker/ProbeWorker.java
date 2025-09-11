@@ -1,10 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.mqWorker;
 
-import AutoMonitoring.AutoMonitoring.config.RabbitConfig;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.dto.DbCommand;
-import AutoMonitoring.AutoMonitoring.domain.dto.ProbeCommand;
-import AutoMonitoring.AutoMonitoring.domain.dto.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.DbCommand;
+import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

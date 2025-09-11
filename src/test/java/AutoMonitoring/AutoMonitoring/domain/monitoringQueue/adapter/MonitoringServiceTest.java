@@ -3,21 +3,17 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 import AutoMonitoring.AutoMonitoring.TestRabbitMQContainer;
 import AutoMonitoring.AutoMonitoring.TestRedisContainer;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.dto.StartMonitoringDTO;
-import AutoMonitoring.AutoMonitoring.domain.dto.StopMornitoringDTO;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
-import AutoMonitoring.AutoMonitoring.domain.redis.adapter.RedisService;
-import lombok.RequiredArgsConstructor;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -52,8 +48,6 @@ class MonitoringServiceTest {
 
     }
 
-    // (선택) Redis 키 네임스페이스(예시)
-    private static String statusKey(String traceId) { return "mon:status:" + traceId; }
 
     @BeforeEach
     void resetTopology() {

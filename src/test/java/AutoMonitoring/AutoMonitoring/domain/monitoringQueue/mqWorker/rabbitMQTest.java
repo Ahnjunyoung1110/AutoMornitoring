@@ -4,6 +4,7 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 import AutoMonitoring.AutoMonitoring.TestRabbitMQContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -27,6 +28,7 @@ public class rabbitMQTest {
         r.add("spring.rabbitmq.port", TestRabbitMQContainer::getAmqpPort);
         r.add("spring.rabbitmq.username", TestRabbitMQContainer::getUsername);
         r.add("spring.rabbitmq.password", TestRabbitMQContainer::getPassword);
+
     }
 
     @Autowired
@@ -35,6 +37,7 @@ public class rabbitMQTest {
     AmqpAdmin amqpAdmin;
 
     final String DEX = "delayex.test";
+
     final String FRK = "failrk.test";
     final String FQ = "failq.test";
 

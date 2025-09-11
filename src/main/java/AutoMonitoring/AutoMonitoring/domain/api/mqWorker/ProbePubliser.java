@@ -1,7 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.api.mqWorker;
 
-import AutoMonitoring.AutoMonitoring.config.RabbitConfig;
-import AutoMonitoring.AutoMonitoring.domain.dto.ProbeCommand;
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -12,6 +12,7 @@ public class ProbePubliser {
     private final RabbitTemplate rabbit;
 
     public void publish(ProbeCommand cmd){
-        rabbit.convertAndSend("ex.pipeline", "route.stage2", cmd);
+
+        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.Q_STAGE1, cmd);
     }
 }

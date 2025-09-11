@@ -1,11 +1,11 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.dto.StartMonitoringDTO;
-import AutoMonitoring.AutoMonitoring.domain.dto.StopMornitoringDTO;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
-import AutoMonitoring.AutoMonitoring.domain.redis.adapter.RedisService;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
