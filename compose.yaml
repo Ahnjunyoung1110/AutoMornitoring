@@ -17,7 +17,7 @@ services:
       retries: 20
 
   rabbitmq:
-    image: rabbitmq:3-management     # 관리 UI 포함 이미지 권장
+    build: ./rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: myuser
       RABBITMQ_DEFAULT_PASS: secret
@@ -29,6 +29,21 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    volumes:
+      - rabbitmq-data:/var/lib/
+
+  redis:
+    image: redis:7-alpine
+    command: [ "redis-server", "--appendonly", "yes", "--requirepass", "redispw" ]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "redispw", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis-data:/data
 
   app:
     build:
@@ -54,3 +69,7 @@ services:
       # SERVER_PORT: 8080
     ports:
       - "8080:8080"   # 앱 외부 노출
+
+volumes:
+  rabbitmq-data:
+  redis-data:

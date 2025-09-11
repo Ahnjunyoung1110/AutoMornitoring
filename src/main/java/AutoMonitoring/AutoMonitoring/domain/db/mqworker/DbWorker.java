@@ -1,5 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.db.mqworker;
 
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.domain.db.adapter.ProgramService;
 import AutoMonitoring.AutoMonitoring.domain.db.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.dto.DbCommand;
@@ -16,7 +17,7 @@ public class DbWorker {
 
 
     // 일딴은 insert만 구현
-    @RabbitListener(queues = "queue.stage3")
+    @RabbitListener(queues = RabbitNames.Q_STAGE2)
     public void handle(DbCommand cmd){
         // db 에 저장한 후 redis의 상태를 변경
         // redis 저장은 추후 구현 예정

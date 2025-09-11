@@ -37,12 +37,17 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 
+	// Redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.amqp:spring-rabbit-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.testcontainers:junit-jupiter:1.20.3'
+	testImplementation 'org.testcontainers:rabbitmq:1.20.3'
+	testImplementation 'org.springframework.amqp:spring-rabbit-test:3.2.6'
 
 	testImplementation platform('org.junit:junit-bom:5.10.2')
 	testImplementation 'org.junit.jupiter:junit-jupiter'     // @Test(jupiter)
@@ -51,6 +56,8 @@ dependencies {
 
 	testImplementation 'org.assertj:assertj-core:3.26.0'     // assertThat
 	testImplementation 'org.mockito:mockito-junit-jupiter:5.12.0'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 dependencyManagement {

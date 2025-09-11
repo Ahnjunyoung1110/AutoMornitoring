@@ -1,4 +1,4 @@
-# 공통(모든 프로필 공통)
+# ===================== 공통 (모든 프로필 공통) =====================
 spring:
   application:
     name: AutoMornitoring
@@ -7,59 +7,56 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  # Redis는 각 프로필에서 host/port만 다르게
+  data:
+    redis:
+      timeout: 5s
+      database: 0
 
 logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
 
-# --- 개발/테스트: H2 + 로컬 RabbitMQ(또는 Docker Desktop의 localhost) ---
----
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    url: jdbc:h2:mem:app;MODE=MySQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
+# ffprobe 경로(기본값: ffprobe). 도커/리눅스면 /usr/bin/ffprobe 등으로 교체 가능
+ffmpeg:
+  ffprobe-path: ffprobe
 
-  rabbitmq:
-    host: localhost        # 로컬에서 스프링만 실행할 때
-    port: 5672
-    username: guest        # 로컬 기본 계정
-    password: guest
-    listener:
-      simple:
-        acknowledge-mode: AUTO   # 필요시 MANUAL로 변경
-        prefetch: 20             # 메시지 당겨오는 개수(옵션)
-    template:
-      reply-timeout: 3000ms
-      mandatory: false
-    publisher-confirm-type: correlated  # 퍼블리셔 확인(옵션)
+# RabbitMQ 토폴로지 이름(코드에서 주입받아 쓰기 쉽게 공통 정의)
+rabbit:
+  exchange:
+    probe: exchange.probe
+    delayed: exchange.probe.delayed
+  routing:
+    probe: route.probe
+    failed: route.failed
+  queue:
+    probe: queue.probe
+    failed: queue.probe.failed
 
-# --- 운영/도커: MySQL + Compose RabbitMQ 서비스(host: rabbitmq) ---
+# CORS 공통(필요시 오버라이드)
+cors:
+  allowed-origins: "http://localhost:3000"
+
+# ===================== prod (운영/도커: MySQL + compose RabbitMQ/Redis) =====================
 ---
 spring:
   config:
     activate:
       on-profile: prod
+
   datasource:
     url: jdbc:mysql://mysql:3306/mydatabase?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
     username: myuser
     password: secret
   jpa:
     hibernate:
-      ddl-auto: update      # 운영 정책에 맞게 validate 권장
+      ddl-auto: update  # 운영에선 validate 권장
 
   rabbitmq:
-    host: rabbitmq          # docker-compose 서비스명
+    host: rabbitmq     # docker-compose 서비스명
     port: 5672
-    username: myuser        # compose에서 만든 계정과 일치
+    username: myuser
     password: secret
     listener:
       simple:
@@ -69,3 +66,42 @@ spring:
       reply-timeout: 3000ms
       mandatory: false
     publisher-confirm-type: correlated
+
+  data:
+    redis:
+      host: redis      # docker-compose 서비스명
+      port: 6379
+      password: redispw
+
+# prod 전용 CORS (원하는 도메인으로 교체)
+cors:
+  allowed-origins: "https://your-frontend.example.com"
+
+# ===================== test (통합테스트: H2 + Testcontainers의 Rabbit/Redis) =====================
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  # Rabbit/Redis 호스트/포트는 @DynamicPropertySource에서 주입 (placeholder)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
