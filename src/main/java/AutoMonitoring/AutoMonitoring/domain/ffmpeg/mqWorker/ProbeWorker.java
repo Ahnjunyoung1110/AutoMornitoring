@@ -24,7 +24,7 @@ public class ProbeWorker {
 
         DbCommand newCmd = new DbCommand(cmd.traceId(), responseDTO);
 
-        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.Q_STAGE2, newCmd);
+        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.RK_STAGE2, newCmd);
 
 
     }

@@ -24,7 +24,7 @@ public class MonitoringServiceImpl implements MonitoringService {
     public void startMornitoring(StartMonitoringDTO dto) {
 
         // queue 에 넣을 dto 생성
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), 0, Instant.now(), dto.traceId());
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(),dto.resolution(), 0, Instant.now(), dto.traceId());
 
         // queue에 입력
         rabit.convertAndSend(RabbitNames.DELAY_PIPELINE, RabbitNames.DRK_STAGE1, cmd);

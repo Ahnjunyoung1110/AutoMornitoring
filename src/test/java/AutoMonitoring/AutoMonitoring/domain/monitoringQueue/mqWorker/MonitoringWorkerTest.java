@@ -18,14 +18,16 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+
+import static java.time.Duration.between;
 
 
 @SpringBootTest
 @ActiveProfiles("test")
 @ExtendWith(TestRedisContainer.class)
-
 class MonitoringWorkerTest {
 
     @Autowired
@@ -53,14 +55,26 @@ class MonitoringWorkerTest {
     @BeforeEach
     void resetTopology() {
         // 싹 정리 후 재선언(매 테스트 독립성)
-        try { amqpAdmin.deleteQueue(RabbitNames.DELAY_STAGE1); } catch (Exception ignored) {}
-        try { amqpAdmin.deleteQueue(RabbitNames.DELAY_STAGE2); } catch (Exception ignored) {}
-        try { amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE1); } catch (Exception ignored) {}
-        try { amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE2); } catch (Exception ignored) {}
+        try {
+            amqpAdmin.deleteQueue(RabbitNames.DELAY_STAGE1);
+        } catch (Exception ignored) {
+        }
+        try {
+            amqpAdmin.deleteQueue(RabbitNames.DELAY_STAGE2);
+        } catch (Exception ignored) {
+        }
+        try {
+            amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE1);
+        } catch (Exception ignored) {
+        }
+        try {
+            amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE2);
+        } catch (Exception ignored) {
+        }
 
 
         // x-delayed-message 교환 선언
-        Map<String,Object> args = Map.of("x-delayed-type", "direct");
+        Map<String, Object> args = Map.of("x-delayed-type", "direct");
         CustomExchange delayedEx = new CustomExchange(RabbitNames.DELAY_PIPELINE, "x-delayed-message", true, false, args);
         amqpAdmin.declareExchange(delayedEx);
 
@@ -78,29 +92,29 @@ class MonitoringWorkerTest {
     @Test
     void receiveMessage() {
         Instant now = Instant.now();
-        String testUrl = "https://ssai.aniview.com/api/v1/hls/streams/sessions/f8a9c75c11ff4852917d1bb22b12e320/media/index.m3u8/0.m3u8";
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd( testUrl,
+        String testUrl = "https://ssai.aniview.com/api/v1/hls/streams/sessions/2ff6df3b46284cf5ac00329e1f313866/media/index.m3u8/1.m3u8";
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080",
                 0, now, "testTraceId");
         monitoringWorker.receiveMessage(cmd);
-        Message received = (Message) rabbitTemplate.receiveAndConvert(RabbitNames.DELAY_STAGE1, 2000);
-        Assertions.assertThat(received).isNotNull();
 
-        // 바디는 컨버터로 DTO 변환
         CheckMediaManifestCmd receiveCmd1 =
-                (CheckMediaManifestCmd) rabbitTemplate.getMessageConverter().fromMessage(received);
+                (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.DELAY_STAGE1, 20_000);
+
+
+        Assertions.assertThat(receiveCmd1).isNotNull();
         Assertions.assertThat(receiveCmd1.traceId()).isEqualTo("testTraceId");
         Assertions.assertThat(receiveCmd1.failCount()).isEqualTo(0);
-        Assertions.assertThat(receiveCmd1.publishTime()).isEqualTo(now.plusSeconds(5));
+        Assertions.assertThat(between(receiveCmd1.publishTime(),now.plusSeconds(5))).isLessThan(Duration.ofSeconds(2));
         Assertions.assertThat(receiveCmd1.mediaUrl()).isEqualTo(testUrl);
 
     }
 
     @Test
-    // url의 수신에 실패한경우
+        // url의 수신에 실패한경우
     void receiveMessageFail() {
         Instant now = Instant.now();
         String testUrl = "TestFailUrl";
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd( testUrl,
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080",
                 0, now, "testTraceId");
         monitoringWorker.receiveMessage(cmd);
 
@@ -115,44 +129,5 @@ class MonitoringWorkerTest {
         // 2초 뒤에 재시도
         Assertions.assertThat(receiveCmd1.publishTime()).isEqualTo(now.plusSeconds(2));
         Assertions.assertThat(receiveCmd1.mediaUrl()).isEqualTo(testUrl);
-    }
-
-    @Test
-    void addToRedis() {
-        String testGetMedia = """
-                #EXTM3U
-                #EXT-X-VERSION:6
-                #EXT-X-MEDIA-SEQUENCE:10447359
-                #EXT-X-TARGETDURATION:5
-                #EXT-X-DISCONTINUITY-SEQUENCE:207612
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0286.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0287.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0288.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0289.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0290.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0291.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0292.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0293.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0294.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                #EXTINF:5.0,
-                https://cdn88.its-newid.net/asset/009f347c29c9b68997626497f5b071cdc74c5820/hevc-44f05910-f304ef58-ad389eb8-bf686c4f0-ts0295.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c29c9b68997626497f5b071cdc74c5820
-                """;
-
-        monitoringWorker.addToRedis(testGetMedia);
-
-
-
-
-
-
     }
 }

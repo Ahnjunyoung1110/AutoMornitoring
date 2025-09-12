@@ -199,7 +199,10 @@ public class MediaProbeImpl implements MediaProbe {
                 int j = i + 1;
                 while (j < lines.size()) {
                     String nxt = lines.get(j).trim();
-                    if (!nxt.isEmpty() && !nxt.startsWith("#")) { uri = nxt; break; }
+                    if (!nxt.isEmpty() && !nxt.startsWith("#")) {
+                        uri = nxt;
+                        break;
+                    }
                     j++;
                 }
                 if (uri == null) continue;

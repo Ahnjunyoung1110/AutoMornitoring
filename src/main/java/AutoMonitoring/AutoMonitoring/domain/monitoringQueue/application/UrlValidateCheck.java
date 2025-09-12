@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
+/*  정상적으로 파일이 있는지 확인하는 함수 */
 public class UrlValidateCheck {
     private static final HttpClient http = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
