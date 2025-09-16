@@ -1,13 +1,17 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
+import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
 import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +22,13 @@ import java.util.regex.Pattern;
 @Slf4j
 @RequiredArgsConstructor
 public class ParseMediaManifestImpl implements ParseMediaManifest {
+
+    private final SnapshotStore snapshotStore;
+    private final SnapshotStorePath snapshotStorePath;
+
+
     @Override
-    public RecordMediaToRedisDTO parse(String manifest) {
+    public RecordMediaToRedisDTO parse(String manifest, Duration getDurationMs, String traceId, String resolution) {
         if (manifest == null) throw new IllegalArgumentException("파싱하려는 매니페스트가 존재하지 않습니다.");
 
         String m = manifest.replace("\r\n", "\n").trim();
@@ -57,7 +66,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
             if(s.equals("#EXT-X-DISCONTINUITY")){
                 disCount++;
 
-                // 정상적인 EXTINF 라는 의미임으로 flase
+                // 정상적인 EXTINF 라는 의미임으로 false
                 pendingExtinfOff = false;
                 continue;
             }
@@ -77,6 +86,21 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 pendingExtinfOff = false;
             }
         }
+
+
+        // discontinuity 가 등장했으면 m3u8을 일딴 저장. 추후 내부 광고이면 ttl을 하루 추후 valid 판정에서 외부 광고이면 20일을 유지한다.
+        if(disCount > 0){
+            try{
+                Path baseM3u8Url = snapshotStorePath.m3u8Base();
+                Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, traceId, resolution, String.valueOf(seq), m);
+                log.info("%s 파일을 저장하였습니다.".formatted(savedPath));
+            } catch (IOException e){
+                throw new RuntimeException(
+                        "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);
+            }
+
+        }
+
 
         int segmentCount = uris.size();
         String segFirstUri = segmentCount > 0 ? uris.get(0) : "";
@@ -106,6 +130,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         // 4) DTO 생성
         return new RecordMediaToRedisDTO(
                 Instant.now(),     // tsEpochMs
+                getDurationMs,
                 seq,
                 dseq,
                 disCount,

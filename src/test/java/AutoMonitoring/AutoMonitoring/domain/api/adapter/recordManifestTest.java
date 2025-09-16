@@ -29,7 +29,7 @@ class recordManifestTest {
 
     @Test
     void recordMasterManifest() {
-        String traceId = recordManifest.recordMasterManifest("Hi");
+        String traceId = recordManifest.recordMasterManifest("Hi", "");
         Assertions.assertThat(traceId).isNotNull();
     }
 }

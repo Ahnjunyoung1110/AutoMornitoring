@@ -1,6 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.program.application;
 
 import AutoMonitoring.AutoMonitoring.domain.program.adapter.ProgramService;
+import AutoMonitoring.AutoMonitoring.domain.program.entity.ProgramInfo;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramAlreadyExistException;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramNotFoundException;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
@@ -21,14 +22,9 @@ public class ProgramServiceImpl implements ProgramService {
 
     @Override
     public Program saveProgram(Program program) {
-        try {
-            return programRepo.save(program);
-        }
-        // 해당 마스터 메니페스트가 이미 존재하는경우
-        catch (DataIntegrityViolationException e) {
-            Program existsProgram = findByMasterManifestUrl(program.getMasterManifestUrl());
-            throw new ProgramAlreadyExistException("해당 프로그램이 이미 존재합니다. 프로그램 정보: " + existsProgram);
-        }
+        Optional<Program> existingProgram = programRepo.findByTraceId(program.getTraceId());
+        if(existingProgram.isPresent()) throw new ProgramAlreadyExistException("해당 TraceId가 이미 존재합니다.");
+        return programRepo.save(program);
 
     }
 

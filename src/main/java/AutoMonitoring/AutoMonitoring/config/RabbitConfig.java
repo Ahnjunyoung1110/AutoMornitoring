@@ -44,10 +44,16 @@ public class RabbitConfig {
 
     // 토폴로지
     @Bean DirectExchange ex() { return new DirectExchange(RabbitNames.EX_PIPELINE); }
-    @Bean Queue q2() { return new Queue(RabbitNames.Q_STAGE1, true); }
-    @Bean Queue q3() { return new Queue(RabbitNames.Q_STAGE2, true); }
-    @Bean Binding b2() { return BindingBuilder.bind(q2()).to(ex()).with(RabbitNames.RK_STAGE1); }
-    @Bean Binding b3() { return BindingBuilder.bind(q3()).to(ex()).with(RabbitNames.RK_STAGE2); }
+    @Bean Queue q1() { return new Queue(RabbitNames.Q_STAGE1, true); }
+    @Bean Queue q2() { return new Queue(RabbitNames.Q_STAGE2, true); }
+    @Bean Queue q3() {return new Queue(RabbitNames.Q_STAGE3, true); }
+
+    @Bean Binding b1() { return BindingBuilder.bind(q1()).to(ex()).with(RabbitNames.RK_STAGE1); }
+    @Bean Binding b2() { return BindingBuilder.bind(q2()).to(ex()).with(RabbitNames.RK_STAGE2); }
+    @Bean Binding b3() { return BindingBuilder.bind(q3()).to(ex()).with(RabbitNames.RK_STAGE3); }
+
+    @Bean Queue valid_q(){ return new Queue(RabbitNames.Q_VALID, true); }
+    @Bean Binding valid_b() { return BindingBuilder.bind(valid_q()).to(ex()).with(RabbitNames.RK_VALID);}
 
 
     @Bean

@@ -67,7 +67,7 @@ class MonitoringServiceTest {
 
     @Test
     void startMornitoring() {
-        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8","1920x1080");
+        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8","1920x1080", "");
         monitoringService.startMornitoring(startMonitoringDTO);
 
         Message msg = rabbitTemplate.receive(Q, 2000);
@@ -96,7 +96,7 @@ class MonitoringServiceTest {
 
     @Test
     void startMornitoringWithWrongUrl() {
-        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong", "1020");
+        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong", "1020","");
         Assertions.assertThatRuntimeException().isThrownBy(() -> monitoringService.startMornitoring(startMonitoringDTO));
 
 

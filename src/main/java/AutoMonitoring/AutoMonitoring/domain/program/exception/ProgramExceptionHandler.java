@@ -12,7 +12,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class ProgramExceptionHandler {
     @ExceptionHandler(ProgramNotFoundException.class)
     public ProblemDetail handleProgramNotFound(
             ProgramNotFoundException ex,

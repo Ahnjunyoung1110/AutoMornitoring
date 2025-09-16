@@ -93,7 +93,7 @@ class MonitoringWorkerTest {
     void receiveMessage() {
         Instant now = Instant.now();
         String testUrl = "https://ssai.aniview.com/api/v1/hls/streams/sessions/2ff6df3b46284cf5ac00329e1f313866/media/index.m3u8/1.m3u8";
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080",
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080","1234",
                 0, now, "testTraceId");
         monitoringWorker.receiveMessage(cmd);
 
@@ -114,7 +114,7 @@ class MonitoringWorkerTest {
     void receiveMessageFail() {
         Instant now = Instant.now();
         String testUrl = "TestFailUrl";
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080",
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080","1234",
                 0, now, "testTraceId");
         monitoringWorker.receiveMessage(cmd);
 

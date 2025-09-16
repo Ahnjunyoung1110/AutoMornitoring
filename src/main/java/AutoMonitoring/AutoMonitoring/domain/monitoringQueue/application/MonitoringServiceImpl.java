@@ -7,6 +7,7 @@ import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringSe
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,7 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MonitoringServiceImpl implements MonitoringService {
 
     private final RabbitTemplate rabit;
@@ -24,10 +26,12 @@ public class MonitoringServiceImpl implements MonitoringService {
     public void startMornitoring(StartMonitoringDTO dto) {
 
         // queue 에 넣을 dto 생성
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(),dto.resolution(), 0, Instant.now(), dto.traceId());
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId());
 
         // queue에 입력
         rabit.convertAndSend(RabbitNames.DELAY_PIPELINE, RabbitNames.DRK_STAGE1, cmd);
+        log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
+
         // redis 변경
         redis.setValues(dto.traceId(), "MONITORING");
         redis.setValues(dto.manifestUrl(), "MONITORING");

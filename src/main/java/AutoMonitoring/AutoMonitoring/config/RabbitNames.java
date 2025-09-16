@@ -5,8 +5,14 @@ public final class RabbitNames {
     public static final String EX_PIPELINE      = "ex.pipeline";
     public static final String Q_STAGE1         = "queue.stage1";
     public static final String Q_STAGE2         = "queue.stage2";
+    public static final String Q_STAGE3         = "queue.stage3";
     public static final String RK_STAGE1        = "route.stage1";
     public static final String RK_STAGE2        = "route.stage2";
+    public static final String RK_STAGE3        = "route.stage3";
+
+    public static final String Q_VALID          = "queue.valid";
+    public static final String RK_VALID         = "route.valid";
+
 
     public static final String DELAY_PIPELINE = "dex.pileline";
     public static final String DELAY_STAGE1         = "delay.queue.stage1";

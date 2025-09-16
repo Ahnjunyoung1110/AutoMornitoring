@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,6 +74,8 @@ public class RedisMediaServiceImpl implements RedisMediaService {
     // Hashmap을 DTO 로 변환
     private RecordMediaToRedisDTO fromHash(Map<Object, Object> h) {
         Instant ts = Instant.ofEpochMilli(Long.parseLong(get(h, "tsEpochMs", "0")));
+        long durMs = Long.parseLong(get(h, "getDurationMs", "0"));
+        Duration getDurationMs = Duration.ofMillis(durMs);
         long seq = Long.parseLong(get(h, "seq", "0"));
         long dseq = Long.parseLong(get(h, "dseq", "0"));
         int disCount = Integer.parseInt(get(h, "disCount", "0"));
@@ -84,7 +87,7 @@ public class RedisMediaServiceImpl implements RedisMediaService {
         boolean wrongExtinf = Boolean.parseBoolean(get(h, "wrongExtinf", "false"));
 
         return new RecordMediaToRedisDTO(
-                ts, seq, dseq, disCount, segmentCount,
+                ts,getDurationMs , seq, dseq, disCount, segmentCount,
                 hashNorm, segFirstUri, segLastUri, tailUrisJson, wrongExtinf
         );
     }

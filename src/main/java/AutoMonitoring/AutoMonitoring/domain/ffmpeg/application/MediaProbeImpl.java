@@ -7,23 +7,26 @@ import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.util.UriEncoder;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MediaProbeImpl implements MediaProbe {
     private final ObjectMapper om;
     @Value("${ffmpeg.ffprobe-path:ffprobe}")
@@ -33,7 +36,7 @@ public class MediaProbeImpl implements MediaProbe {
 
 
     @Override
-    public ProbeDTO probe(String masterManifestUrl) {
+    public ProbeDTO probe(String masterManifestUrl, String UserAgent) {
         try {
             // 1) ffprobe 실행
             String json = run(
@@ -100,6 +103,7 @@ public class MediaProbeImpl implements MediaProbe {
                     java.util.UUID.randomUUID().toString().replace("-", ""),
                     Instant.now(),
                     masterManifestUrl,
+                    UserAgent,
                     formatName,
                     durationSec,
                     overallBitrate,
@@ -164,21 +168,34 @@ public class MediaProbeImpl implements MediaProbe {
         }
     }
 
+
     /* ---------- 마스터 M3U8 파서 (#EXT-X-STREAM-INF) ---------- */
     // 파싱후 서브 메니페스트의 url을 저장한다.
 
     private static final Pattern STREAM_INF_ATTR =
             Pattern.compile("(\\w+)=((?:\"[^\"]+\")|[^,]+)");
 
-    private static List<VariantDTO> parseMasterM3u8(String masterUrl) {
+    private List<VariantDTO> parseMasterM3u8(String masterUrl) {
+
+        log.info("함수가 실행되었습니다.");
         try {
+            log.info("함수가 실행되었습니다1.");
+            String cleaned = masterUrl.replace("\r","").replace("\n","").trim();
+            String[] parts = cleaned.split("\\?");
+            String baseUrl = parts[0];
+            String queryParam = parts[1];
+            String encodedQueryParams = UriEncoder.encode(queryParam);  // 인코딩된 쿼리 파라미터
+            String finalUrl = baseUrl + "?" + encodedQueryParams;
+            log.info("함수가 실행되었습니다2.");
+
+
+
             HttpClient hc = HttpClient.newHttpClient();
-            HttpRequest req = HttpRequest.newBuilder(URI.create(masterUrl)).GET().build();
+            HttpRequest req = HttpRequest.newBuilder(URI.create(finalUrl)).GET().build();
             String body = hc.send(req, HttpResponse.BodyHandlers.ofString()).body();
 
             List<String> lines = body.lines().toList();
             List<VariantDTO> out = new ArrayList<>();
-            URI base = URI.create(masterUrl);
 
             for (int i = 0; i < lines.size(); i++) {
                 String line = lines.get(i).trim();
@@ -195,33 +212,53 @@ public class MediaProbeImpl implements MediaProbe {
                 }
 
                 // 다음 유효 라인이 URI
-                String uri = null;
+                String mediaUri = null;
                 int j = i + 1;
                 while (j < lines.size()) {
                     String nxt = lines.get(j).trim();
                     if (!nxt.isEmpty() && !nxt.startsWith("#")) {
-                        uri = nxt;
+                        mediaUri = nxt;
                         break;
                     }
                     j++;
                 }
-                if (uri == null) continue;
+                if (mediaUri == null) continue;
 
                 String resolution = kv.getOrDefault("RESOLUTION", null); // e.g. 1920x1080
                 Integer bandwidth = null;
                 if (kv.containsKey("BANDWIDTH")) {
-                    try { bandwidth = Integer.valueOf(kv.get("BANDWIDTH")); } catch (NumberFormatException ignore) {}
+                    try { bandwidth = Integer.valueOf(kv.get("BANDWIDTH"));
+                    } catch (NumberFormatException ignore) {}
                 }
-                String audioGroup = kv.getOrDefault("AUDIO", null);
-                String absUri = base.resolve(uri).toString();
 
-                out.add(new VariantDTO(resolution, bandwidth, absUri, audioGroup));
+                String audioGroup = kv.getOrDefault("AUDIO", null);
+
+
+                out.add(new VariantDTO(resolution, bandwidth, mediaUri, audioGroup));
             }
             return out;
         } catch (Exception e) {
             // 네트워크 실패해도 probe 자체는 진행 가능하도록 빈 리스트 반환
+            log.warn("실 패 했 다.");
+            log.warn(e.getMessage());
             return List.of();
+
+
         }
+    }
+
+    static String buildEncodedUrl(String base, Map<String,String> params) {
+        StringBuilder sb = new StringBuilder(base);
+        sb.append(base.contains("?") ? "&" : "?");
+        boolean first = true;
+        for (var e : params.entrySet()) {
+            if (!first) sb.append('&');
+            first = false;
+            sb.append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+                    .append('=')
+                    .append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+        }
+        return sb.toString();
     }
 
 }

@@ -23,18 +23,27 @@ import java.util.zip.GZIPInputStream;
 @Slf4j
 public class GetMediaServiceImpl implements GetMediaService {
     @Override
-    public String getMedia(String url, String userAgnet) {
+    public String getMedia(String url, String userAgent) {
         HttpClient client = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(3))
+                .connectTimeout(Duration.ofSeconds(7))
                 .build();
 
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(7))
-                .header("User-Agent", "AutoMonitoring/1.0 (+hls-checker)")
-                .header("Accept", "application/x-mpegURL, application/vnd.apple.mpegurl, text/plain, */*")
-                // gzip을 보내줄 수 있으니 명시 (직접 해제 처리)
-                .header("Accept-Encoding", "gzip")
+                .header("User-Agent", userAgent != null ? userAgent : "Testing")
+                .header("Accept", "*/*")
+                .header("Accept-Encoding", "gzip, deflate, br, zstd") // 여러 인코딩 방식 추가
+                .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7") // 브라우저와 동일한 언어 설정
+                .header("Cache-Control", "no-cache") // 브라우저와 동일하게 캐시 관련 헤더 추가
+                .header("Pragma", "no-cache") // 캐시를 무시하고 최신 데이터를 받기 위해
+                .header("sec-ch-ua", "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Brave\";v=\"140\"") // UA 관련 보안 헤더
+                .header("sec-ch-ua-mobile", "?0") // 모바일 여부
+                .header("sec-ch-ua-platform", "\"Windows\"") // 플랫폼 정보
+                .header("sec-fetch-dest", "empty")
+                .header("sec-fetch-mode", "cors")
+                .header("sec-fetch-site", "none")
+                .header("sec-fetch-storage-access", "active")
+                .header("sec-gpc", "1")
                 .GET()
                 .build();
 

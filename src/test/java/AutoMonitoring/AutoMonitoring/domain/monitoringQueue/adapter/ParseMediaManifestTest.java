@@ -1,18 +1,21 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.ParseMediaManifestImpl;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.SnapshotStore;
 import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
+import lombok.RequiredArgsConstructor;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.time.Duration;
 
 
+@SpringBootTest
+@RequiredArgsConstructor
 class ParseMediaManifestTest {
 
-    private final ParseMediaManifest parseMediaManifest = new ParseMediaManifestImpl();
+    private final ParseMediaManifest parseMediaManifest;
 
 
 
@@ -46,7 +49,7 @@ class ParseMediaManifestTest {
                 https://cdn88.its-newid.net/asset/009f347c012baf3bd8696a027b05017c333e0716/hevc-448bc513-f37f735b-ad4302bb-bf13f04c0-ts0167.ts?channel_id=newid_091&target_platform=lg_channels&resolution=1920x1080&program_id=009f347c012baf3bd8696a027b05017c333e0716
                 """;
 
-        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest);
+        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest, Duration.ZERO,"123", "1080");
 
 
         Assertions.assertThat(recordMediaToRedisDTO.seq()).isEqualTo(10462006);
@@ -82,7 +85,7 @@ class ParseMediaManifestTest {
                 https://qwer
                 """;
 
-        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest);
+        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest, Duration.ZERO, "123", "1080");
 
         Assertions.assertThat(recordMediaToRedisDTO.disCount()).isEqualTo(1);
         Assertions.assertThat(recordMediaToRedisDTO.wrongExtinf()).isEqualTo(false);
@@ -112,7 +115,7 @@ class ParseMediaManifestTest {
                 https://qwer
                 """;
 
-        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest);
+        RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(testManifest, Duration.ZERO, "123", "1080");
 
         Assertions.assertThat(recordMediaToRedisDTO.disCount()).isEqualTo(0);
         Assertions.assertThat(recordMediaToRedisDTO.wrongExtinf()).isEqualTo(true);

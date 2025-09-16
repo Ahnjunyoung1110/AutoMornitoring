@@ -1,8 +1,10 @@
 package AutoMonitoring.AutoMonitoring.util.redis.dto;
 
+import java.time.Duration;
 import java.time.Instant;
 public record RecordMediaToRedisDTO(
         Instant tsEpochMs,  // 수집시각
+        Duration requestDurationMs,
         long seq,           // media-sequence의 값
         long dseq,          // #discontinuity sequence의 값
         int disCount,  // 해당 m3u8에 #EXT-X-discontinuity 가 얼마나 있는가
@@ -15,4 +17,5 @@ public record RecordMediaToRedisDTO(
 )
 
 {
+
 }

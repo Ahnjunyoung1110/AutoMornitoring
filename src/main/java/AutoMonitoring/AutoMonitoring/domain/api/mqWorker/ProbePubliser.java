@@ -13,6 +13,6 @@ public class ProbePubliser {
 
     public void publish(ProbeCommand cmd){
 
-        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.Q_STAGE1, cmd);
+        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.RK_STAGE1, cmd);
     }
 }

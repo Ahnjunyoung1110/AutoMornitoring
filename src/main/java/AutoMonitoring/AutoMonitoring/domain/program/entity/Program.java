@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Builder
@@ -25,6 +27,7 @@ public class Program {
     @Column(name = "trace_id", nullable = false, unique = true, length = 64)
     private String traceId;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String masterManifestUrl;
 
     @Column(name = "format")
@@ -35,6 +38,8 @@ public class Program {
 
     @Column(name = "overall_bitrate")
     private Integer overallBitrate;        // null 허용 (bps)
+
+    private String UserAgent;
 
     /** streams */
     @ElementCollection
@@ -51,7 +56,14 @@ public class Program {
 
 
     /* 도메인 함수 */
-//    public Program update()
+    public static Map<String,String> getResolutionToUrlDomain(Program program){
+        Map<String, String> resolutionToUrlMap = new HashMap<>();
+
+        for(VariantInfoEmb variant : program.variants){
+           resolutionToUrlMap.put(variant.getResolution(), variant.getUri());
+        }
+        return resolutionToUrlMap;
+    }
 
 
     /* ---------- 매핑 헬퍼 ---------- */
@@ -62,6 +74,7 @@ public class Program {
                 .traceId(dto.traceId())
                 .format(dto.format())
                 .durationSec(dto.durationSec())
+                .UserAgent(dto.userAgent())
                 .overallBitrate(dto.overallBitrate());
 
         List<StreamInfoEmb> sList = new ArrayList<>();

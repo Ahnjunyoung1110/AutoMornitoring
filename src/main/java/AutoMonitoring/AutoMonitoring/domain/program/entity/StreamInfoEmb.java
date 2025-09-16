@@ -6,12 +6,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Embeddable
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 public class StreamInfoEmb {
 
     @Column(name = "type", length = 16)   private String type;     // "video"|"audio"

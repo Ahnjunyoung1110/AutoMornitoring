@@ -8,6 +8,7 @@ public record ProbeDTO(
         String traceId,
         Instant probeAt,
         String masterManifestUrl,
+        String userAgent,
         String format,              // ex) "hls"
         Double durationSec,         // null 허용
         Integer overallBitrate,     // null 허용 (bps)
