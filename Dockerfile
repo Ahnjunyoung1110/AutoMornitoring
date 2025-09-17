@@ -3,8 +3,13 @@ FROM gradle:8.10.2-jdk21 AS build
 WORKDIR /app
 COPY build.gradle settings.gradle gradlew ./
 COPY gradle gradle
-RUN ./gradlew --no-daemon build -x test || true
+
 COPY . .
+
+# gradlew 파일에 실행 권한 부여
+RUN chmod +x ./gradlew
+
+RUN ./gradlew --no-daemon build -x test || true
 RUN ./gradlew --no-daemon clean bootJar
 
 # --- runtime ---

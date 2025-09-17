@@ -1,6 +1,8 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
+import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -21,13 +23,13 @@ import java.util.zip.GZIPInputStream;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class GetMediaServiceImpl implements GetMediaService {
+
+    private final HttpClient httpClient;
+
     @Override
     public String getMedia(String url, String userAgent) {
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(7))
-                .build();
 
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                 .header("User-Agent", userAgent != null ? userAgent : "Testing")
@@ -48,7 +50,7 @@ public class GetMediaServiceImpl implements GetMediaService {
                 .build();
 
         try {
-            HttpResponse<byte[]> res = client.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> res = httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
 
             int sc = res.statusCode();
             if (sc < 200 || sc >= 300) {

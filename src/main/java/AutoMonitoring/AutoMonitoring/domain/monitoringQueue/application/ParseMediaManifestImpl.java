@@ -93,7 +93,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
             try{
                 Path baseM3u8Url = snapshotStorePath.m3u8Base();
                 Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, traceId, resolution, String.valueOf(seq), m);
-                log.info("%s 파일을 저장하였습니다.".formatted(savedPath));
+                log.info("%s .".formatted(savedPath));
             } catch (IOException e){
                 throw new RuntimeException(
                         "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);

@@ -7,6 +7,8 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class RedisServiceImpl implements RedisService {
@@ -32,7 +34,18 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
+    public boolean getOpsAbsent(String key, String value,Duration ttl) {
+        Boolean Ok = redisTemplate.opsForValue().setIfAbsent(key,value, ttl);
+        return Boolean.TRUE.equals(Ok);
+    }
+
+    @Override
     public boolean checkExistsValue(String value) {
         return !value.equals("false");
+    }
+
+    @Override
+    public void deleteValues(String key) {
+        redisTemplate.delete(key);
     }
 }

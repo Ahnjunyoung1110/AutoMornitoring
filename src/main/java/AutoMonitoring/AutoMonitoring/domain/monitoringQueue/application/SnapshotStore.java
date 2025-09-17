@@ -29,6 +29,13 @@ public class SnapshotStore {
                                     String mediaSequence,
                                     String content) throws IOException {
 
+        String saveKey = RedisKeys.completeFlag(traceId, resolution, mediaSequence);
+        Duration ttl1 = Duration.ofHours(2);
+        boolean first = redis.getOpsAbsent(saveKey, "1", ttl1);
+        if (!first){
+            log.info("중복 저장입니다.");
+            throw new IOException("dd");
+        }
         Files.createDirectories(baseDir);
         String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .withZone(ZoneOffset.UTC).format(Instant.now());

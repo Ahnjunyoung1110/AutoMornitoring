@@ -16,7 +16,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class testAll {
 
-    GetMediaService getMediaService = new GetMediaServiceImpl();
+    private final GetMediaService getMediaService;
     private final ParseMediaManifest parseMediaManifest;
 
     @Test
