@@ -16,9 +16,20 @@ class MediaProbeTest {
 
     @Test
     void probe() {
-        ProbeDTO probeDTO = mediaProbe.probe("https://ads.its-newid.net/api/manifest.m3u8?tp=lg_channels&channel_name=고독한미식가&channel_id=newid_091&mpf=687af619-39af1962-d77ce6a6&apikey=48230e6b-1cea0097-15975f93-39af1962&auth=f637d864-f0e39a59-0745dbf5-53a167da&ads.live=1&ads.deviceid=e924943d-4c9a-8553-6455-ee6aab7e155a&ads.ifa=2443a3c5-5e4e-565a-4a63-022848e9a4c0&ads.ifatype=lgwebostvadid&ads.lat=0&ads.donotsell=&ads.ua=Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.34 Safari/537.36 DMOST/2.0.1 (; LGE; webOSTV; WEBOS4.10.1 05.40.90; W4_m16p3;) &ads.ip=125.130.79.4&ads.gdpr=0&ads.gdpr_consent=&ads.country=KR&ads.us_privacy=&ads.appstoreurl=https://kr.lgappstv.com/main/tvapp/detail?appId=948993&ads.bundleid=948993&ads.appname=lgchannels&ads.appversion=3.3.36-2&ads.devicetype=Connected TV&ads.devicemake=LG_ELECTRONICS_LG&ads.devicemodel=OLED55B9FNA&ads.targetad=1&ads.fck=171&ads.viewsize=0\n", "");
+        String url = "https://ads.its-newid.net/api/manifest.m3u8.php?tp=samsung_tvplus&channel_name=%EC%9A%B0%EB%A6%AC%EC%9D%98%EC%8B%9D%ED%83%81&channel_id=newid_016&apikey=b97c7a7d0c82424bb607e141ef215779&auth=4267aefa-e23c8733-cc1d493e-388f9d05&ads.live=[CONTENT_LIVE]&ads.device_did=97531fe2-5e9b-8ecf-48f4-8cdbeb3b982d&ads.ifa=[IFA]&ads.ifatype=[IFA_TYPE]&ads.lat=[LMT]&ads.donotsell=[DNS]&ads.ip=[IP]&ads.gdpr=[GDPR]&ads.gdprconsent=[GDPR_CONSENT]&ads.country=[COUNTRY]&ads.us_privacy=[US_PRIVACY]&ads.appstoreurl=[APP_STOREURL]&ads.bundleid=[APP_BUNDLE]&ads.app.name=%7BAPP_NAME%7D&ads.appversion=[APP_VERSION]&ads.devicetype=[DEVICE_TYPE]&ads.devicemake=[DEVICE_MAKE]&ads.devicemodel=[DEVICE_MODEL]&ads.targetad=[TARGETAD_ALLOWED]&ads.content_title=[PROGRAM_TITLE]&ads.content_series=[SERIES_TITLE]&ads.content_season=[SEASON_TITLE]&ads.content_episode=[EPISODE_NO]&ads.content_length=[CONTENT_LENGTH]&ads.device.dnt=0&ads.app_domain=%7BAPP_DOMAIN%7D&nh=true&ads.device_did=97531fe2-5e9b-8ecf-48f4-8cdbeb3b982d&ads.device_dnt=0&ads.app_domain=%7BAPP_DOMAIN%7D&ads.app_name=%7BAPP_NAME%7D&ads.ssai_vendor=SSSLIVE&ads.afsdk_params=%7BAFSDK_VALUE%7D&ads.service_id=KRBD2200001QD";
+        ProbeDTO probeDTO = mediaProbe.probe(url, "");
                 System.out.println(probeDTO);
         Assertions.assertThat(probeDTO.traceId()).isNotNull();
         System.out.println(probeDTO.traceId());
+    }
+
+    @Test
+    void probe2() {
+        String url = "https://ads.its-newid.net/api/manifest.m3u8?tp=lg_channels&channel_name=newkmovies&channel_id=newid_009&apikey=48230e6b-1cea0097-15975f93-39af1962&auth=00594230-f203384d-ebcd3217-8573a2e1&ads.live=[CONTENT_LIVE]&ads.deviceid=[DEVICE_ID]&ads.ifa=[IFA]&ads.ifatype=[IFA_TYPE]&ads.lat=[LMT]&ads.donotsell=[DNS]&ads.ip=[IP]&ads.gdpr=[GDPR]&ads.gdprconsent=[GDPR_CONSENT]&ads.country=[COUNTRY]&ads.us_privacy=[US_PRIVACY]&ads.appstoreurl=[APP_STOREURL]&ads.bundleid=[APP_BUNDLE]&ads.appname=[APP_NAME]&ads.appversion=[APP_VERSION]&ads.devicetype=[DEVICE_TYPE]&ads.devicemake=[DEVICE_MAKE]&ads.devicemodel=[DEVICE_MODEL]&ads.targetad=[TARGETAD_ALLOWED]&ads.content_title=[PROGRAM_TITLE]&ads.content_series=[SERIES_TITLE]&ads.content_season=[SEASON_TITLE]&ads.content_episode=[EPISODE_NO]&ads.content_length=[CONTENT_LENGTH]&ads.ua=[UA]";
+        ProbeDTO probeDTO = mediaProbe.probe(url, "");
+        System.out.println(probeDTO);
+        Assertions.assertThat(probeDTO.traceId()).isNotNull();
+        System.out.println(probeDTO.traceId());
+
     }
 }

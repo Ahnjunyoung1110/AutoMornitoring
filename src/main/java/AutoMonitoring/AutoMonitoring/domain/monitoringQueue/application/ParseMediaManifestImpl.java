@@ -2,6 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
     private final SnapshotStore snapshotStore;
     private final SnapshotStorePath snapshotStorePath;
+    private final RedisService redisService;
 
 
     @Override
@@ -47,14 +49,16 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         Pattern extinfPat = Pattern.compile("^#EXTINF:([0-9]+(?:\\.[0-9]+)?),\\s*$");
         boolean pendingExtinfOff = false; // 직전 EXTINF가 target과 유의미하게 다른가?
 
+        int disUrl = 111;
 
-        for (String line : m.split("\n")){
-            String s = line.trim();
-            if(s.isEmpty()) continue;
+        String[] lines = m.split("\n");
+        for (int i = 0; i < lines.length; i++){
+            String line = lines[i].trim();
+            if(line.isEmpty()) continue;
 
             // #EXTINF 가 입력된 줄일 경우
-            if(s.startsWith("#EXTINF:")){
-                Matcher em = extinfPat.matcher(s);
+            if(line.startsWith("#EXTINF:")){
+                Matcher em = extinfPat.matcher(line);
                 if (em.find()){
                     double dur = Double.parseDouble(em.group(1));
                     pendingExtinfOff = Math.abs(dur - targetDuration) > eps;
@@ -63,21 +67,21 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
             }
 
             // EXT-X-DISCONTINUITY 가 있는경우
-            if(s.equals("#EXT-X-DISCONTINUITY")){
+            if(line.equals("#EXT-X-DISCONTINUITY")){
                 disCount++;
-
+                disUrl = Math.min(disUrl,i+2);
                 // 정상적인 EXTINF 라는 의미임으로 false
                 pendingExtinfOff = false;
                 continue;
             }
 
-            if (s.startsWith("#")) {
+            if (line.startsWith("#")) {
                 // 다른 태그는 무시
                 continue;
             }
 
             // 청크 uri 라인
-            String normUri = stripQuery(s);
+            String normUri = stripQuery(line);
             uris.add(normUri);
 
             // 이전 EXTINF 가 이상했는데 EXT-X-DISCONTINUITY가 등장하지 않은경우
@@ -92,7 +96,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         if(disCount > 0){
             try{
                 Path baseM3u8Url = snapshotStorePath.m3u8Base();
-                Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, traceId, resolution, String.valueOf(seq), m);
+                String url = lines[disUrl].trim();
+                Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m);
                 log.info("%s .".formatted(savedPath));
             } catch (IOException e){
                 throw new RuntimeException(

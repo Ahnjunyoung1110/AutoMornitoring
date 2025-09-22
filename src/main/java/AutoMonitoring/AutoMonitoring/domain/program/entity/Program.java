@@ -39,6 +39,7 @@ public class Program {
     @Column(name = "overall_bitrate")
     private Integer overallBitrate;        // null 허용 (bps)
 
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String UserAgent;
 
     /** streams */

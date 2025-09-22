@@ -13,6 +13,8 @@ public final class RabbitNames {
     public static final String Q_VALID          = "queue.valid";
     public static final String RK_VALID         = "route.valid";
 
+    public static final String ONLY_DELAY_QUEUE = "ttl.delay.queue";
+
 
     public static final String DELAY_PIPELINE = "dex.pileline";
     public static final String DELAY_STAGE1         = "delay.queue.stage1";

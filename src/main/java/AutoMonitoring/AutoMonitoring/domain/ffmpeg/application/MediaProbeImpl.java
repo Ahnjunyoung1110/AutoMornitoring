@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.yaml.snakeyaml.util.UriEncoder;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -24,6 +26,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,18 +36,32 @@ public class MediaProbeImpl implements MediaProbe {
     @Value("${ffmpeg.ffprobe-path:ffprobe}")
     private String ffprobePath;
 
-
-
-
     @Override
     public ProbeDTO probe(String masterManifestUrl, String UserAgent) {
         try {
+
+
+            String url = masterManifestUrl.trim();
+            // 인코딩 된 문장인지 확인 안되어있다면 인코딩
+            if (!url.matches(".*%[0-9A-Fa-f]{2}.*")){
+                url = url.replace( "[", "%5B").replace(  "]", "%5D");
+                url = UriComponentsBuilder.fromUriString(url).build(false).toUriString();
+            }
+            // '[', ']' 는 인코딩 되면 요청이 안되므로 재 수정
+            String escapedUrl = url.replace( "%5B","[").replace( "%5D", "]");
+
             // 1) ffprobe 실행
             String json = run(
-                    ffprobePath, "-v", "error",
-                    "-of", "json",
-                    "-show_format", "-show_streams",
-                    masterManifestUrl
+                    ffprobePath,
+                    "-v","error",
+                    "-show_error",
+                    "-print_format","json",           // = -of json
+                    "-show_format","-show_streams",
+                    "-f","hls",                       // ★ HLS demuxer 강제
+                    "-allowed_extensions","ALL",
+                    "-extension_picky", "0",
+                    "-protocol_whitelist","file,http,https,tcp,tls,crypto", // ★ 내부 fetch 허용
+                    "-i" , escapedUrl
             );
 
             // 2) JSON 파싱
@@ -96,7 +114,7 @@ public class MediaProbeImpl implements MediaProbe {
             }
 
             // 4) 마스터 m3u8 파싱 → variants
-            List<VariantDTO> variants = parseMasterM3u8(masterManifestUrl);
+            List<VariantDTO> variants = parseMasterM3u8(escapedUrl);
 
             // 5) ProbeDTO 생성
             return new ProbeDTO(
@@ -158,14 +176,15 @@ public class MediaProbeImpl implements MediaProbe {
     }
 
     // 실제 커맨드 런 함수
-    private static String run(String... cmd) throws Exception {
-        Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-        try (var br = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
-            StringBuilder sb = new StringBuilder(); String line;
-            while ((line = br.readLine()) != null) sb.append(line).append('\n');
-            if (p.waitFor()!=0) throw new RuntimeException("non-zero exit");
-            return sb.toString();
+    private static String run(String... cmd) throws IOException, InterruptedException {
+        var p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
+        var out = new String(p.getInputStream().readAllBytes(), UTF_8);
+        var err = new String(p.getErrorStream().readAllBytes(), UTF_8);
+        int code = p.waitFor();
+        if (code != 0) {
+            throw new IllegalArgumentException("probe failed: exit="+code+"\ncmd="+String.join(" ",cmd)+"\nstderr:\n"+err);
         }
+        return out;
     }
 
 
@@ -254,9 +273,9 @@ public class MediaProbeImpl implements MediaProbe {
         for (var e : params.entrySet()) {
             if (!first) sb.append('&');
             first = false;
-            sb.append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+            sb.append(URLEncoder.encode(e.getKey(), UTF_8))
                     .append('=')
-                    .append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+                    .append(URLEncoder.encode(e.getValue(), UTF_8));
         }
         return sb.toString();
     }

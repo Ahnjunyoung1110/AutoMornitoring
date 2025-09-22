@@ -24,18 +24,12 @@ public class SnapshotStore {
 
     // traceId_resolution_UTCyyyyMMdd_HHmmss.exp<epochMs>.m3u8
     public Path saveSnapshot(Path baseDir,
+                                    String url,
                                     String traceId,
                                     String resolution,
                                     String mediaSequence,
                                     String content) throws IOException {
 
-        String saveKey = RedisKeys.completeFlag(traceId, resolution, mediaSequence);
-        Duration ttl1 = Duration.ofHours(2);
-        boolean first = redis.getOpsAbsent(saveKey, "1", ttl1);
-        if (!first){
-            log.info("중복 저장입니다.");
-            throw new IOException("dd");
-        }
         Files.createDirectories(baseDir);
         String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .withZone(ZoneOffset.UTC).format(Instant.now());
@@ -43,23 +37,15 @@ public class SnapshotStore {
         Duration ttl = Duration.ofHours(5L);
 
         // 외부 광고를 저장하는 옵션이 켜져 있는 경우에만 20일 동안 저장
-        if(redis.getValues(RedisKeys.argument_record_discontinuity(traceId)).startsWith("true")){
+        if(true){//redis.getValues(RedisKeys.argument_record_discontinuity(traceId)).startsWith("true")){
             // #EXT-X-DISCONTINUITY 를 찾고 그 다음에 나오는 ts 요청이 Adslate인지 아닌지 판단하는 함수
-            String[] lines = content.split("\n"); // 이미 \r\n -> \n 정규화했다고 가정
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i].trim();
-                if (!line.startsWith("#EXT-X-DISCONTINUITY")) continue;
+            // http://cdn으로 시작하지 않을경우 경우 ssai임. 예) ../../../../경로~
+            if (!url.startsWith("https://cdn") && !url.startsWith("http://cdn") && !url.startsWith("https://cc-")){
+                ttl = Duration.ofDays(7L);
 
-                if (i + 1 < lines.length) {
-                    String nextEXTINF = lines[i + 1].trim();
-                    String nextTS = lines[i + 2].trim();
-
-                    // http로 시작하는 경우 ssai임. 예) ../../../../경로~
-                    if (!nextTS.startsWith("http*")){
-                        ttl = Duration.ofDays(7L);
-                    }
-                }
-                break;
+            }
+            else{
+                return Path.of("");
             }
         }
 

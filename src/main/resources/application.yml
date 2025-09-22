@@ -16,6 +16,10 @@ spring:
     m3u8-dir: ${APP_BASE_M3U8_DIR:/file/m3u8}
     ts-dir: ${APP_BASE_TS_DIR:/file/ts}
 
+server:
+  tomcat:
+    relaxed-query-chars: ['[', ']']
+
 logging:
   level:
     org.hibernate.SQL: debug

@@ -2,15 +2,19 @@ package AutoMonitoring.AutoMonitoring.util.redis.application;
 
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RedisServiceImpl implements RedisService {
 
 
@@ -42,6 +46,23 @@ public class RedisServiceImpl implements RedisService {
     @Override
     public boolean checkExistsValue(String value) {
         return !value.equals("false");
+    }
+
+    @Override
+    public boolean execute(String Script, String key, String ttl) {
+        Long result = redisTemplate.execute(
+                RedisScript.of(Script, Long.class),
+                Collections.singletonList(key),
+                ttl
+        );
+        if(result == 1L){
+            log.info("큐에 작업을 삽입합니다. redisService Key: %s".formatted(key));
+            return true;
+        }
+        else{
+            log.info("큐에 작업이 존재합니다. redisService Key: %s".formatted(key));
+            return false;
+        }
     }
 
     @Override
