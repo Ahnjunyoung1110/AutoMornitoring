@@ -34,9 +34,9 @@ class MonitoringServiceTest {
     @Autowired
     private RedisService redis;
 
-    final String Q = RabbitNames.DELAY_STAGE1;
-    final String DEX = RabbitNames.DELAY_PIPELINE;
-    final String RK = RabbitNames.DRK_STAGE1;
+    final String Q = RabbitNames.WORK_QUEUE;
+    final String DEX = RabbitNames.EX_PIPELINE;
+    final String RK = RabbitNames.WORK_STAGE1;
 
     @DynamicPropertySource
     static void dynamicProps(DynamicPropertyRegistry r) {
@@ -103,7 +103,7 @@ class MonitoringServiceTest {
         // redis 에서의 traceId의 status가 Wrong
         Assertions.assertThat(redis.getValues("qwer")).isEqualTo("WRONG");
         // 이후 message queue가 null이어야 한다.
-        Message msg = rabbitTemplate.receive(RabbitNames.DELAY_STAGE1, 2000);
+        Message msg = rabbitTemplate.receive(RabbitNames.WORK_QUEUE, 2000);
         Assertions.assertThat(msg).isNull();
 
     }

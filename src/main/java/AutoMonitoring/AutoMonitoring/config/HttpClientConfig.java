@@ -14,8 +14,8 @@ import java.util.concurrent.Executors;
 public class HttpClientConfig {
 
     @Bean(destroyMethod = "shutdown")
-    public ExecutorService httpExecutor(){
-        return Executors.newFixedThreadPool(16);
+    public ExecutorService httpExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor(); // JDK 21
     }
 
     @Bean

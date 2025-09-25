@@ -22,24 +22,14 @@ server:
 
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.SQL: info
+    org.hibernate.orm.jdbc.bind: info
+
+
 
 # ffprobe 경로(기본값: ffprobe). 도커/리눅스면 /usr/bin/ffprobe 등으로 교체 가능
 ffmpeg:
   ffprobe-path: ffprobe
-
-# RabbitMQ 토폴로지 이름(코드에서 주입받아 쓰기 쉽게 공통 정의)
-rabbit:
-  exchange:
-    probe: exchange.probe
-    delayed: exchange.probe.delayed
-  routing:
-    probe: route.probe
-    failed: route.failed
-  queue:
-    probe: queue.probe
-    failed: queue.probe.failed
 
 # CORS 공통(필요시 오버라이드)
 cors:
@@ -68,7 +58,10 @@ spring:
     listener:
       simple:
         acknowledge-mode: AUTO
-        prefetch: 50
+        prefetch: 3
+      direct:
+        acknowledge-mode: AUTO
+        prefetch: 3
     template:
       reply-timeout: 3000ms
       mandatory: false

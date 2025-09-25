@@ -38,7 +38,7 @@ public class MonitoringServiceImpl implements MonitoringService {
 
         if(first){
             // queue에 입력
-            rabit.convertAndSend(RabbitNames.DELAY_PIPELINE, RabbitNames.DRK_STAGE1, cmd);
+            rabit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.WORK_STAGE1, cmd);
             log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
         }
         else{

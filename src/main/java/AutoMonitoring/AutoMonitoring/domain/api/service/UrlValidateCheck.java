@@ -46,7 +46,7 @@ public class UrlValidateCheck {
             HttpResponse<Void> response = http.send(request, HttpResponse.BodyHandlers.discarding());
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
 
-            if (elapsedMs > 3000) return false;
+            if (elapsedMs > 4000) return false;
             int code  = response.statusCode();
             return code >= 200 && code < 400;
 

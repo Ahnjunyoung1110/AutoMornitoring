@@ -14,13 +14,16 @@ import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 @RequiredArgsConstructor
 @Component
@@ -50,9 +53,10 @@ public class MonitoringWorker {
 
 
     // 내부에서 계속 돌아가는 메시지를 받아 처리하는 함수, 처리에 실패하면 딜레이 큐로 보낸다.
-    @RabbitListener(queues = RabbitNames.DELAY_STAGE1, concurrency = "6-12")
+    @RabbitListener(queues = RabbitNames.WORK_QUEUE, concurrency = "5", containerFactory="probeContainerFactory")
     void receiveMessage(CheckMediaManifestCmd cmd){
         log.info("메시지를 수신했습니다. %s, %s".formatted(cmd.traceId(), cmd.resolution()));
+
 
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
         Duration ttl = Duration.ofMinutes(3L); // 워커가 비정상 종료될 경우를 대비한 TTL
@@ -64,47 +68,30 @@ public class MonitoringWorker {
         }
 
         try{
+            log.info("일딴 curl 날리기 전이요~");
             Instant nowTime = Instant.now();
+            Duration haha = Duration.between(cmd.publishTime(), nowTime);
+            log.info("이만큼이나 목표 시간과의 차이가 있어요~ "+ haha.toSeconds());
+
             // curl
             String media = getMediaService.getMedia(cmd.mediaUrl(), cmd.userAgent());
 
             Instant getTime = Instant.now();
             Duration requestDurationMs = Duration.between(nowTime,getTime);
-
-            RecordMediaToRedisDTO recordMediaToRedisDTO;
+            log.info("요청하는데 오래 걸린건가? 왜 한번씩... "+ requestDurationMs.toMillis());
 
             // 파싱
-
-            recordMediaToRedisDTO = parseMediaManifest.parse(media, requestDurationMs,cmd.traceId(), cmd.resolution());
+            RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(media, requestDurationMs,cmd.traceId(), cmd.resolution());
             
 
             Long duration = Duration.between(nowTime, Instant.now()).toMillis();
             log.info("메시지를 처리하는데 이만큼 걸렸습니다. " + String.valueOf(duration));
+
             // redis에 저장
             addToRedis(cmd.traceId(),cmd.resolution(),recordMediaToRedisDTO);
+            sendDelay(cmd);
 
-            CheckMediaManifestCmd newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(),cmd.userAgent() ,0, nowTime, cmd.traceId());
-            long base = 5_000L;
-            long elapsed = Duration.between(cmd.publishTime(), Instant.now()).toMillis();
 
-            log.info("딜레이 시간 " + String.valueOf(elapsed));
-//            String workerFlag = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
-
-//            redisService.deleteValues(workerFlag);
-//            // redis로 flag를 확인
-//            boolean first = checkQueueAndPublish(cmd.traceId(), cmd.resolution());
-//            if(!first){
-//                log.info("해당 메시지가 이미 큐에 존재합니다.");
-//                return;
-//            }
-
-//        // validate test 메시지 발행
-//        sendMessageToValid(cmd.traceId(),cmd.resolution());
-
-            // 딜레이(5초 - 이전시간 걸린 딜레이) 메시지 생성 후 저장
-            rabbit.convertAndSend(RabbitNames.DELAY_PIPELINE, RabbitNames.DRK_STAGE1, newCmd,
-                    m -> {m.getMessageProperties().setDelayLong(base); return m; }
-            );
         }
         finally {
             redisService.deleteValues(lockKey);
@@ -119,59 +106,52 @@ public class MonitoringWorker {
         redisMediaService.saveState(traceId, resolution, recordMediaToRedisDTO);
     }
 
+    // 딜레이를 설정해서 queue 에 입력
+    void sendDelay(CheckMediaManifestCmd cmd){
+        Instant now = Instant.now();
+        // 기본 딜레이는 5초
+        final long base = 5_000L;
+
+        Instant prevDue = cmd.publishTime() != null ? cmd.publishTime() : Instant.now();
+        Instant nextDue = prevDue.plusMillis(base);
+        long skew = Math.floorMod(cmd.traceId().hashCode(), 700); // 0~699ms 고정 지터
+        nextDue = nextDue.plusMillis(skew);
+        final long delay = Math.max(Duration.between(Instant.now(), nextDue).toMillis(),100L);
+
+        CheckMediaManifestCmd newcmd;
+        if((now.toEpochMilli() > nextDue.toEpochMilli()) || (delay == 100L)){
+            newcmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, now, cmd.traceId());
+            log.warn("시간이 많이 다르네잉...");
+            rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.WORK_STAGE1, newcmd);
+            return;
+        }
+        log.info("duration: " + String.valueOf(delay));
+
+        newcmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId());
+        String delayQueue = getDelayQueue(delay);
+        rabbit.convertAndSend("", delayQueue, newcmd, m -> {
+            m.getMessageProperties().setExpiration(String.valueOf(delay));
+            long nowLong = System.currentTimeMillis();
+            m.getMessageProperties().setHeader("x-sent-at", nowLong);
+            m.getMessageProperties().setHeader("x-due-at", nowLong + delay);
+            return m;
+        });
+    }
+
+    private String getDelayQueue(long delayMs) {
+        return switch((int)(delayMs / 1000)) {
+            case 0, 1 -> RabbitNames.ONLY_DELAY_QUEUE_1S;
+            case 2 -> RabbitNames.ONLY_DELAY_QUEUE_2S;
+            case 3 -> RabbitNames.ONLY_DELAY_QUEUE_3S;
+            case 4 -> RabbitNames.ONLY_DELAY_QUEUE_4S;
+            default -> RabbitNames.ONLY_DELAY_QUEUE;
+        };
+    }
+
 //    // validate 테스트를 위해 메시지를 전달
 //    void sendMessageToValid(String traceId, String resolution){
 //        CheckValidDTO send = new CheckValidDTO(traceId, resolution);
 //        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.RK_VALID, send);
 //    }
-
-    // queue에서 메시지를 꺼낼때의 redis flag를 설정
-//    boolean convertFlag(String traceId, String resolution){
-//        String workerFlag = RedisKeys.workerLock(traceId, resolution);
-//        Duration ttl = Duration.ofMinutes(3L);
-//        boolean firstWorker = redisService.getOpsAbsent(workerFlag, "1", ttl);
-//        if(firstWorker){
-//            log.info("작업을 수행합니다.");
-//            log.info("Key : %s".formatted(workerFlag));
-//            return true;
-//        }
-//        else{
-//            log.info("중복된 작업이 존재합니다. ");
-//            log.info("Key : %s".formatted(workerFlag));
-//            return false;
-//        }
-//    }
-//
-//    // queue에 메시지가 있는지 확인하고 없다면 메시지를 발행
-//    boolean checkQueueAndPublish(String traceId, String resolution){
-//        String queueFlag = RedisKeys.queueFlag(traceId, resolution);
-//        String workerFlag = RedisKeys.workerLock(traceId, resolution);
-//        String luaScript = """
-//        if redis.call('exists', KEYS[1]) == 1 then
-//            return 0
-//        else
-//            redis.call('setex', KEYS[1], ARGV[1], '1')
-//            return 1
-//        end
-//        """;
-//
-//
-//        boolean firstQueue = redisService.execute(luaScript, queueFlag, "300");
-//        if(firstQueue){
-//            log.info("큐에 작업을 삽입합니다.");
-//            log.info("Key : %s".formatted(queueFlag));
-//            return true;
-//        }
-//        else{
-//            log.info("중복된 작업이 큐 내에 존재합니다. ");
-//            log.info("Key : %s".formatted(queueFlag));
-//            redisService.deleteValues(workerFlag);
-//            return false;
-//        }
-//
-//
-//    }
-
-
 
 }

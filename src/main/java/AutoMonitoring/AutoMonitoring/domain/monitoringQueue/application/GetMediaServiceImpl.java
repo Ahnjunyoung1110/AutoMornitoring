@@ -32,6 +32,7 @@ public class GetMediaServiceImpl implements GetMediaService {
     public String getMedia(String url, String userAgent) {
 
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(4))
                 .header("User-Agent", userAgent != null ? userAgent : "Testing")
                 .header("Accept", "*/*")
                 .header("Accept-Encoding", "gzip, deflate, br, zstd") // 여러 인코딩 방식 추가

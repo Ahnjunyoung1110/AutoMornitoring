@@ -14,11 +14,15 @@ public final class RabbitNames {
     public static final String RK_VALID         = "route.valid";
 
     public static final String ONLY_DELAY_QUEUE = "ttl.delay.queue";
+    public static final String ONLY_DELAY_QUEUE_1S = "ttl.delay.queue.1s";
+    public static final String ONLY_DELAY_QUEUE_2S = "ttl.delay.queue.2s";
+    public static final String ONLY_DELAY_QUEUE_3S = "ttl.delay.queue.3s";
+    public static final String ONLY_DELAY_QUEUE_4S = "ttl.delay.queue.4s";
+
+    public static final String WORK_QUEUE = "working.queue.stage1";
+    public static final String WORK_STAGE1        = "working.route.stage1";
+    public static final String WORK_DLX_QUEUE = "working.queue.stage2";
+    public static final String WORK_STAGE2        = "working.route.stage2";
 
 
-    public static final String DELAY_PIPELINE = "dex.pileline";
-    public static final String DELAY_STAGE1         = "delay.queue.stage1";
-    public static final String DELAY_STAGE2         = "delay.queue.stage2";
-    public static final String DRK_STAGE1        = "delay.route.stage1";
-    public static final String DRK_STAGE2        = "delay.route.stage2";
 }
