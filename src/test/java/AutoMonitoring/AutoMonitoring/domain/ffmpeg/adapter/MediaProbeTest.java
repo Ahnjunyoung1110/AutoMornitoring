@@ -1,5 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter;
 
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,7 +10,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class MediaProbeTest {
+
+class MediaProbeTest extends BaseTest {
 
     @Autowired
     MediaProbe mediaProbe;

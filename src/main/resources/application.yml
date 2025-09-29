@@ -93,13 +93,6 @@ spring:
     hibernate:
       ddl-auto: create-drop
 
-  # Rabbit/Redis 호스트/포트는 @DynamicPropertySource에서 주입 (placeholder)
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-
   data:
     redis:
       host: localhost

@@ -1,5 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.GetMediaServiceImpl;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,7 @@ import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-class GetMediaServiceTest {
+class GetMediaServiceTest extends BaseTest {
 
     @Autowired
     GetMediaService getMediaService;

@@ -31,7 +31,7 @@ public class MonitoringServiceImpl implements MonitoringService {
         CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId());
 
         String key = RedisKeys.queueFlag(dto.traceId(), dto.resolution());
-        Duration ttl = Duration.ofMinutes(10);
+        Duration ttl = Duration.ofMinutes(3);
 
 
         boolean first = redis.getOpsAbsent(key, "1", ttl);

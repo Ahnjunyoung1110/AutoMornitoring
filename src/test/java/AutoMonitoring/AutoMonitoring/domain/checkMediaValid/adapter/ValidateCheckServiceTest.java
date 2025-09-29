@@ -1,8 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.adapter;
 
-import AutoMonitoring.AutoMonitoring.TestRedisContainer;
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
-import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,12 +13,9 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.Duration;
 import java.time.Instant;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 @ActiveProfiles("test")
-@ExtendWith(TestRedisContainer.class)
-class ValidateCheckServiceTest {
+class ValidateCheckServiceTest extends BaseTest {
     @Autowired
     RedisMediaService redis;
 

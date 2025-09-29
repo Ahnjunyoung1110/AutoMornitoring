@@ -1,15 +1,15 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.mqWorker;
 
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @RequiredArgsConstructor
-class ProbeWorkerTest {
+class ProbeWorkerTest extends BaseTest {
     private final ProbeWorker probeWorker;
 
     @Test

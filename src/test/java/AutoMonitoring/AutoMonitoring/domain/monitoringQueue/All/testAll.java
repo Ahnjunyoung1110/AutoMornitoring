@@ -1,5 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.All;
 
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.GetMediaServiceImpl;
@@ -14,7 +15,7 @@ import java.time.Duration;
 
 @SpringBootTest
 @RequiredArgsConstructor
-public class testAll {
+public class testAll  extends BaseTest {
 
     private final GetMediaService getMediaService;
     private final ParseMediaManifest parseMediaManifest;

@@ -71,7 +71,7 @@ public class MonitoringWorker {
             log.info("일딴 curl 날리기 전이요~");
             Instant nowTime = Instant.now();
             Duration haha = Duration.between(cmd.publishTime(), nowTime);
-            log.info("이만큼이나 목표 시간과의 차이가 있어요~ "+ haha.toSeconds());
+            log.info("이만큼이나 목표 시간과의 차이가 있어요~ "+ haha.toMillis());
 
             // curl
             String media = getMediaService.getMedia(cmd.mediaUrl(), cmd.userAgent());

@@ -9,7 +9,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
     ports:
       - "3306:3306"
-    command: ["--default-authentication-plugin=mysql_native_password","--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci"]
+    command: ["--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci"]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
@@ -59,8 +59,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mydatabase?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: secret
-      JAVA_TOOL_OPTIONS: >-
-        -Xlog:gc*,safepoint:file=/logs/gc-%t-%p.log:time,uptime,level,tags:filecount=5,filesize=10M
 
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
@@ -74,10 +72,6 @@ services:
     volumes:
       - C:/Users/jyahn/file/m3u8:/file/m3u8   # m3u8 스냅샷 저장소
       - C:/Users/jyahn/file/ts:/file/ts       # ts 스냅샷 저장소
-      - .logs:/logs
-      # 프로필/포트 등 필요시
-      # SPRING_PROFILES_ACTIVE: prod
-      # SERVER_PORT: 8080
     ports:
       - "8080:8080"   # 앱 외부 노출
 
@@ -86,4 +80,3 @@ volumes:
   redis-data:
   m3u8-volume:
   ts-volume:
-  logs:

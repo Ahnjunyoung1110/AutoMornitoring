@@ -1,0 +1,24 @@
+spring:
+  data:
+    redis:
+      host: localhost   # 컨테이너 포트 매핑했다면
+      port: 6379
+      timeout: 5s
+
+    rabbitmq:
+      host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/app?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: app
+    password: app
+
+  jpa:
+    hibernate:
+      ddl-auto: update   # dev 한정
+    open-in-view: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect

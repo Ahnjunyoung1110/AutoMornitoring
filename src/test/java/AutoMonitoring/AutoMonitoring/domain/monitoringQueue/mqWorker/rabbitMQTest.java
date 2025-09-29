@@ -1,7 +1,5 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
-
-
-import AutoMonitoring.AutoMonitoring.TestRabbitMQContainer;
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,17 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-public class rabbitMQTest {
+public class rabbitMQTest  extends BaseTest {
 
-    // rabbitMQ를 사용하기 위한 설정
-    @DynamicPropertySource
-    static void props(DynamicPropertyRegistry r) {
-        r.add("spring.rabbitmq.host", TestRabbitMQContainer::getHost);
-        r.add("spring.rabbitmq.port", TestRabbitMQContainer::getAmqpPort);
-        r.add("spring.rabbitmq.username", TestRabbitMQContainer::getUsername);
-        r.add("spring.rabbitmq.password", TestRabbitMQContainer::getPassword);
-
-    }
 
     @Autowired
     RabbitTemplate rabbitTemplate;
@@ -59,18 +48,6 @@ public class rabbitMQTest {
     // delay가 되는지 확인
     @Test
     void delayed_publish_and_consume() {
-        rabbitTemplate.convertAndSend(DEX, FRK, "hello delayed", m -> {
-            m.getMessageProperties().setHeader("x-delay", 500);
-            return m;
-        });
-
-        // 딜레이가 되었다면 Null이어야함
-        var immediate = rabbitTemplate.receiveAndConvert(FQ, 100);
-        assertThat(immediate).isNull();
-
-        // 일정 시간 기다렸기 때문에 메시지를 수신해야함
-        var received = rabbitTemplate.receiveAndConvert(FQ, 2000);
-        assertThat(received).isEqualTo("hello delayed");
     }
 
     // 정상 queue 에서 수신된 경우

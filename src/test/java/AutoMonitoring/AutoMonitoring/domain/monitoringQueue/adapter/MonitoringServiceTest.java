@@ -1,7 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
-import AutoMonitoring.AutoMonitoring.TestRabbitMQContainer;
-import AutoMonitoring.AutoMonitoring.TestRedisContainer;
+import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
@@ -9,7 +8,30 @@ import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit//package AutoMonitoring.AutoMonitoring;
+//
+//import org.testcontainers.containers.GenericContainer;
+//import org.testcontainers.images.builder.ImageFromDockerfile;
+//import org.testcontainers.containers.wait.strategy.Wait;
+//
+//public class TestRabbitMQContainer {
+//
+//
+//    static {
+//        INSTANCE.start(); // 클래스 로딩 시 1회 기동
+//    }
+//
+//    // ---- 접근 헬퍼 ----
+//    public static String getHost() { return INSTANCE.getHost(); }
+//    public static Integer getAmqpPort() { return INSTANCE.getMappedPort(5672); }
+//    public static Integer getHttpPort() { return INSTANCE.getMappedPort(15672); }
+//    public static String getUsername() { return USER; }
+//    public static String getPassword() { return PASS; }
+//
+//    // 필요 시 컨테이너 핸들 직접 쓰고 싶다면
+//    public static GenericContainer<?> getContainer() { return INSTANCE; }
+//}
+        .jupiter.api.extension.ExtendWith;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +44,7 @@ import java.util.Map;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@ExtendWith(TestRedisContainer.class)
-class MonitoringServiceTest {
+class MonitoringServiceTest extends BaseTest {
 
     @Autowired
     private MonitoringService monitoringService;
@@ -37,16 +58,6 @@ class MonitoringServiceTest {
     final String Q = RabbitNames.WORK_QUEUE;
     final String DEX = RabbitNames.EX_PIPELINE;
     final String RK = RabbitNames.WORK_STAGE1;
-
-    @DynamicPropertySource
-    static void dynamicProps(DynamicPropertyRegistry r) {
-        // RabbitMQ
-        r.add("spring.rabbitmq.host", TestRabbitMQContainer::getHost);
-        r.add("spring.rabbitmq.port", TestRabbitMQContainer::getAmqpPort);
-        r.add("spring.rabbitmq.username", TestRabbitMQContainer::getUsername);
-        r.add("spring.rabbitmq.password", TestRabbitMQContainer::getPassword);
-
-    }
 
 
     @BeforeEach

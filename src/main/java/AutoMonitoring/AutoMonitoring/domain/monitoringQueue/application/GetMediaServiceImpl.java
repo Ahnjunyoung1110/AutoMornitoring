@@ -32,13 +32,13 @@ public class GetMediaServiceImpl implements GetMediaService {
     public String getMedia(String url, String userAgent) {
 
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(4))
-                .header("User-Agent", userAgent != null ? userAgent : "Mozilla/5.0 (Web0S; Linux; Tizen) AppleWebKit/537.36 (KHTML, like Gecko) SmartTV/1.0")
+                .timeout(Duration.ofSeconds(8))
                 .header("Accept", "*/*")
-                .header("Accept-Encoding", "gzip, deflate, br, zstd") // 여러 인코딩 방식 추가
+                .header("Accept-Encoding", "gzip, deflate") // 여러 인코딩 방식 추가
                 .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7") // 브라우저와 동일한 언어 설정
                 .header("Cache-Control", "no-cache") // 브라우저와 동일하게 캐시 관련 헤더 추가
                 .header("Pragma", "no-cache") // 캐시를 무시하고 최신 데이터를 받기 위해
+                .header("User-Agent", userAgent != null ? userAgent : "Mozilla/5.0 (Web0S; Linux; Tizen) AppleWebKit/537.36 (KHTML, like Gecko) SmartTV/1.0")
                 .GET()
                 .build();
 
