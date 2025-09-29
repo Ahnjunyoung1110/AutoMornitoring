@@ -4,9 +4,8 @@ import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
 import AutoMonitoring.AutoMonitoring.domain.api.dto.ProbeAPI;
 import AutoMonitoring.AutoMonitoring.domain.api.dto.ProbeRequestDTO;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
-import jakarta.annotation.Nullable;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +16,8 @@ public class RecordController {
 
     private final RecordManifest recordManifest;
     private final UrlValidateCheck urlValidateCheck;
+    private final RedisService redisService;
+
     @PostMapping
     public ResponseEntity<?> submit(@RequestBody ProbeRequestDTO probeRequestDTO){
         String MasterManifestUrl = probeRequestDTO.getUrl();
@@ -36,6 +37,8 @@ public class RecordController {
             return ResponseEntity.badRequest().body("Url이 잘못 입력 되었습니다.");
         }
         String traceId = recordManifest.recordMasterManifest(url, userAgent);
+        redisService.setValues(traceId, "TRYING");
+
         ProbeAPI probeAPI = ProbeAPI.builder()
                 .traceId(traceId)
                 .masterUrl(url)

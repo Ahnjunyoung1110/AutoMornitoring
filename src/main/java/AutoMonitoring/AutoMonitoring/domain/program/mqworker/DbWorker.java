@@ -32,7 +32,7 @@ public class DbWorker {
 
         // 이후 모니터링을 시행
         ProgramInfo stream = ProgramInfo.getProgramInfo(savedProgram);
-        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.RK_STAGE3, stream);
+        rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE3, stream);
 
 
     }

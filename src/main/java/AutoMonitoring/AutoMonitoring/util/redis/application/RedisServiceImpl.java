@@ -3,7 +3,11 @@ package AutoMonitoring.AutoMonitoring.util.redis.application;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -11,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +43,34 @@ public class RedisServiceImpl implements RedisService {
             return "false";
         }
         return (String) values.get(key);
+    }
+
+    @Override
+    public List<String> getValues(List<String> keys) {
+        // MGET을 실행하여 여러 키의 값을 한번에 가져옵니다.
+        List<Object> values = redisTemplate.opsForValue().multiGet(keys);
+
+        // RedisTemplate<String, Object>를 사용하므로, 결과를 String 리스트로 변환합니다.
+        return values.stream()
+                .map(value -> value != null ? String.valueOf(value) : null)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Set<String> getKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+
+        // SCAN 명령을 실행하여 패턴에 맞는 키를 안전하게 검색합니다.
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            // try-with-resources를 사용하여 Cursor를 안전하게 닫습니다.
+            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build())) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next()));
+                }
+            }
+            return null;
+        });
+        return keys;
     }
 
     @Override

@@ -25,25 +25,6 @@ public class rabbitMQTest  extends BaseTest {
     @Autowired
     AmqpAdmin amqpAdmin;
 
-    final String DEX = "delayex.test";
-
-    final String FRK = "failrk.test";
-    final String FQ = "failq.test";
-
-    @BeforeEach
-    void declare() {
-        // 지연 교환: 타입/아규먼트 일치해야 함 (기존 타입과 다르면 PRECONDITION_FAILED 남)
-        var args = new java.util.HashMap<String, Object>();
-        args.put("x-delayed-type", "direct");
-        var delayedEx = new org.springframework.amqp.core.CustomExchange(
-                DEX, "x-delayed-message", true, false, args);
-
-        amqpAdmin.declareExchange(delayedEx);
-        amqpAdmin.declareQueue(new Queue(FQ, true));
-        amqpAdmin.declareBinding(
-                BindingBuilder.bind(new Queue(FQ)).to(delayedEx).with(FRK).noargs());
-    }
-
 
     // delay가 되는지 확인
     @Test

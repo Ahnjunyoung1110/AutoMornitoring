@@ -1,133 +1,79 @@
-//package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
-//
-//import AutoMonitoring.AutoMonitoring.TestRabbitMQContainer;
-//import AutoMonitoring.AutoMonitoring.TestRedisContainer;
-//import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-//import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
-//import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
-//import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-//import org.assertj.core.api.Assertions;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.junit.jupiter.api.extension.ExtendWith;
-//import org.springframework.amqp.core.*;
-//import org.springframework.amqp.rabbit.core.RabbitTemplate;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.boot.test.context.SpringBootTest;
-//import org.springframework.test.context.ActiveProfiles;
-//import org.springframework.test.context.DynamicPropertyRegistry;
-//import org.springframework.test.context.DynamicPropertySource;
-//
-//import java.time.Duration;
-//import java.time.Instant;
-//import java.util.Map;
-//
-//import static java.time.Duration.between;
-//
-//
-//@SpringBootTest
-//@ActiveProfiles("test")
-//@ExtendWith(TestRedisContainer.class)
-//class MonitoringWorkerTest {
-//
-//    @Autowired
-//    private MonitoringService monitoringService;
-//    @Autowired
-//    private RabbitTemplate rabbitTemplate;
-//    @Autowired
-//    private AmqpAdmin amqpAdmin;
-//    @Autowired
-//    private RedisService redis;
-//
-//    @Autowired
-//    private MonitoringWorker monitoringWorker;
-//
-//
-//    // rabbitMQ를 사용하기 위한 설정
-//    @DynamicPropertySource
-//    static void props(DynamicPropertyRegistry r) {
-//        r.add("spring.rabbitmq.host", TestRabbitMQContainer::getHost);
-//        r.add("spring.rabbitmq.port", TestRabbitMQContainer::getAmqpPort);
-//        r.add("spring.rabbitmq.username", TestRabbitMQContainer::getUsername);
-//        r.add("spring.rabbitmq.password", TestRabbitMQContainer::getPassword);
-//    }
-//
-//    @BeforeEach
-//    void resetTopology() {
-//        // 싹 정리 후 재선언(매 테스트 독립성)
-//        try {
-//            amqpAdmin.deleteQueue(RabbitNames.D);
-//        } catch (Exception ignored) {
-//        }
-//        try {
-//            amqpAdmin.deleteQueue(RabbitNames.DELAY_STAGE2);
-//        } catch (Exception ignored) {
-//        }
-//        try {
-//            amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE1);
-//        } catch (Exception ignored) {
-//        }
-//        try {
-//            amqpAdmin.deleteExchange(RabbitNames.DRK_STAGE2);
-//        } catch (Exception ignored) {
-//        }
-//
-//
-//        // x-delayed-message 교환 선언
-//        Map<String, Object> args = Map.of("x-delayed-type", "direct");
-//        CustomExchange delayedEx = new CustomExchange(RabbitNames.DELAY_PIPELINE, "x-delayed-message", true, false, args);
-//        amqpAdmin.declareExchange(delayedEx);
-//
-//        // 큐 & 바인딩
-//        amqpAdmin.declareQueue(new Queue(RabbitNames.DELAY_STAGE1, true));
-//        amqpAdmin.declareBinding(BindingBuilder.bind(new Queue(RabbitNames.DELAY_STAGE1)).to(delayedEx).with(RabbitNames.DRK_STAGE1).noargs());
-//
-//        amqpAdmin.declareQueue(new Queue(RabbitNames.DELAY_STAGE2, true));
-//        amqpAdmin.declareBinding(BindingBuilder.bind(new Queue(RabbitNames.DELAY_STAGE2)).to(delayedEx).with(RabbitNames.DRK_STAGE2).noargs());
-//
-//    }
-//
-//
-//    // 정상적으로 수신하는경우 5초 뒤 queue에 입력
-//    @Test
-//    void receiveMessage() {
-//        Instant now = Instant.now();
-//        String testUrl = "https://ssai.aniview.com/api/v1/hls/streams/sessions/2ff6df3b46284cf5ac00329e1f313866/media/index.m3u8/1.m3u8";
-//        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080","1234",
-//                0, now, "testTraceId");
-//        monitoringWorker.receiveMessage(cmd);
-//
-//        CheckMediaManifestCmd receiveCmd1 =
-//                (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.DELAY_STAGE1, 20_000);
-//
-//
-//        Assertions.assertThat(receiveCmd1).isNotNull();
-//        Assertions.assertThat(receiveCmd1.traceId()).isEqualTo("testTraceId");
-//        Assertions.assertThat(receiveCmd1.failCount()).isEqualTo(0);
-//        Assertions.assertThat(between(receiveCmd1.publishTime(),now.plusSeconds(5))).isLessThan(Duration.ofSeconds(2));
-//        Assertions.assertThat(receiveCmd1.mediaUrl()).isEqualTo(testUrl);
-//
-//    }
-//
-//    @Test
-//        // url의 수신에 실패한경우
-//    void receiveMessageFail() {
-//        Instant now = Instant.now();
-//        String testUrl = "TestFailUrl";
-//        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(testUrl,"1080","1234",
-//                0, now, "testTraceId");
-//        monitoringWorker.receiveMessage(cmd);
-//
-//        Message received = (Message) rabbitTemplate.receiveAndConvert(RabbitNames.DELAY_STAGE2, 2000);
-//        Assertions.assertThat(received).isNotNull();
-//
-//        // 바디는 컨버터로 DTO 변환
-//        CheckMediaManifestCmd receiveCmd1 =
-//                (CheckMediaManifestCmd) rabbitTemplate.getMessageConverter().fromMessage(received);
-//        Assertions.assertThat(receiveCmd1.traceId()).isEqualTo("testTraceId");
-//        Assertions.assertThat(receiveCmd1.failCount()).isEqualTo(1);
-//        // 2초 뒤에 재시도
-//        Assertions.assertThat(receiveCmd1.publishTime()).isEqualTo(now.plusSeconds(2));
-//        Assertions.assertThat(receiveCmd1.mediaUrl()).isEqualTo(testUrl);
-//    }
-//}
+package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
+
+import AutoMonitoring.AutoMonitoring.BaseTest;
+import AutoMonitoring.AutoMonitoring.URLTestConfig;
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
+import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest
+class MonitoringWorkerTest extends BaseTest {
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RedisService redisService;
+
+    private final String TRACE_ID = "test-trace-id-monitor";
+    private final String RESOLUTION = "720p";
+
+    @AfterEach
+    void tearDown() {
+        // 테스트 데이터 정리
+        redisService.deleteValues(RedisKeys.state(TRACE_ID, RESOLUTION));
+        while(rabbitTemplate.receive(RabbitNames.Q_WORK) != null);
+        while(rabbitTemplate.receive(RabbitNames.Q_WORK_DLX) != null);
+        while(rabbitTemplate.receive(RabbitNames.Q_DELAY_DEFAULT) != null);
+    }
+
+    @Test
+    @DisplayName("정상 URL 수신 시, 다음 작업을 위해 지연 큐로 메시지를 보낸다")
+    void receiveMessage_Success() {
+        // given: 성공 URL을 담은 Command
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.SUCCESS_MANIFEST_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        redisService.setValues(RedisKeys.state(TRACE_ID, RESOLUTION), "MONITORING");
+
+        // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
+        rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);
+
+        // then: 5초 지연에 해당하는 Q_DELAY_DEFAULT 큐로 메시지가 전송되어야 함
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_DEFAULT, 5500); // 딜레이 시간(5초)보다 길게 대기
+        assertThat(received).isNotNull();
+        assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
+
+        // Redis 상태는 변경 없이 MONITORING을 유지해야 함
+        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
+        assertThat(status).isEqualTo("MONITORING");
+    }
+
+    @Test
+    @DisplayName("잘못된 URL 수신 시, 상태를 RETRYING (1/5)으로 변경하고 재시도 큐로 메시지를 보낸다")
+    void receiveMessage_FirstFailure() {
+        // given: 잘못된 URL을 담은 Command
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.INVALID_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+
+        // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
+        rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);
+
+        // then: 재시도 큐(Q_WORK_DLX)에서 메시지가 수신되어야 함
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_WORK_DLX, 2000);
+        assertThat(received).isNotNull();
+        assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
+
+        // Redis 상태가 RETRYING (1/5)으로 변경되었는지 확인
+        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
+        assertThat(status).isEqualTo("RETRYING (1/5)");
+    }
+}

@@ -1,7 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
@@ -14,16 +13,13 @@ import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Message;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 
 @RequiredArgsConstructor
 @Component
@@ -38,120 +34,116 @@ public class MonitoringWorker {
     private final MonitoringService monitoringService;
 
 
-    // DB를 저장한 후 모니터링을 시작하는 함수
+    // DB 저장 후 모니터링 시작 메시지를 수신
     @RabbitListener(queues = RabbitNames.Q_STAGE3)
     void startMessage(ProgramInfo info){
-
+        log.info("모니터링 시작 메시지 수신. TraceId: {}", info.getTraceId());
         for(String key: info.getResolutionToUrl().keySet()){
+            String redisKey = RedisKeys.state(info.getTraceId(), key);
+            redisService.setValues(redisKey, "MONITORING");
+
             StartMonitoringDTO dto = new StartMonitoringDTO(info.getTraceId(), info.getResolutionToUrl().get(key) , key, info.getUserAgent());
             monitoringService.startMornitoring(dto);
         }
-
-        log.info("모니터링을 시작합니다. %s,%s".formatted(info.getTraceId(),info.getResolutionToUrl()));
+        log.info("모니터링을 시작합니다. TraceId: {}, 대상 해상도: {}", info.getTraceId(), info.getResolutionToUrl().keySet());
+        redisService.setValues(info.getTraceId(), "MONITORING");
     }
 
 
-
-    // 내부에서 계속 돌아가는 메시지를 받아 처리하는 함수, 처리에 실패하면 딜레이 큐로 보낸다.
-    @RabbitListener(queues = RabbitNames.WORK_QUEUE, concurrency = "5", containerFactory="probeContainerFactory")
+    // 주기적인 모니터링 작업을 수행. 실패 시 재시도 큐로 보냄.
+    @RabbitListener(queues = RabbitNames.Q_WORK, concurrency = "5", containerFactory="probeContainerFactory")
     void receiveMessage(CheckMediaManifestCmd cmd){
-        log.info("메시지를 수신했습니다. %s, %s".formatted(cmd.traceId(), cmd.resolution()));
-
+        log.info("모니터링 작업 수신. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
 
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
         Duration ttl = Duration.ofMinutes(3L); // 워커가 비정상 종료될 경우를 대비한 TTL
         boolean lockAcquired = redisService.getOpsAbsent(lockKey, "1", ttl);
 
         if (!lockAcquired) {
-            log.info("다른 워커가 이미 작업을 수행 중입니다. Key: %s".formatted(lockKey));
+            log.info("다른 워커가 이미 작업을 수행 중입니다. Key: {}", lockKey);
             return; // Lock 획득에 실패하면 중복 작업이므로 즉시 종료
         }
 
         try{
-            log.info("일딴 curl 날리기 전이요~");
             Instant nowTime = Instant.now();
-            Duration haha = Duration.between(cmd.publishTime(), nowTime);
-            log.info("이만큼이나 목표 시간과의 차이가 있어요~ "+ haha.toMillis());
+            log.info("목표 시간과의 차이: {}ms", Duration.between(cmd.publishTime(), nowTime).toMillis());
 
-            // curl
+            // 1. 미디어 매니페스트 다운로드
             String media = getMediaService.getMedia(cmd.mediaUrl(), cmd.userAgent());
-
             Instant getTime = Instant.now();
-            Duration requestDurationMs = Duration.between(nowTime,getTime);
-            log.info("요청하는데 오래 걸린건가? 왜 한번씩... "+ requestDurationMs.toMillis());
+            Duration requestDuration = Duration.between(nowTime, getTime);
 
-            // 파싱
-            RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(media, requestDurationMs,cmd.traceId(), cmd.resolution());
-            
+            // 2. 매니페스트 파싱
+            RecordMediaToRedisDTO recordMediaToRedisDTO = parseMediaManifest.parse(media, requestDuration, cmd.traceId(), cmd.resolution());
+            log.info("작업 처리 완료. 처리 시간: {}ms", Duration.between(nowTime, Instant.now()).toMillis());
 
-            Long duration = Duration.between(nowTime, Instant.now()).toMillis();
-            log.info("메시지를 처리하는데 이만큼 걸렸습니다. " + String.valueOf(duration));
+            // 3. Redis에 결과 저장
+            addToRedis(cmd.traceId(), cmd.resolution(), recordMediaToRedisDTO);
 
-            // redis에 저장
-            addToRedis(cmd.traceId(),cmd.resolution(),recordMediaToRedisDTO);
+            // 4. 다음 작업 스케줄링
             sendDelay(cmd);
 
+        } catch (Exception e) {
+            log.error("모니터링 작업 실패. 재시도 큐로 보냅니다. TraceId: {}, Resolution: {}, Error: {}", cmd.traceId(), cmd.resolution(), e.getMessage());
 
-        }
-        finally {
+            // 재시도 상태(1/5)를 Redis에 기록
+            String redisKey = RedisKeys.state(cmd.traceId(), cmd.resolution());
+            redisService.setValues(redisKey, "RETRYING (1/5)");
+
+            // 실패 시 AmqpRejectAndDontRequeueException을 발생시켜 메시지를 DLX로 보냄
+            throw new AmqpRejectAndDontRequeueException("Monitoring task failed", e);
+        } finally {
             redisService.deleteValues(lockKey);
-            log.info("작업 완료 후 Lock을 해제합니다. Key: %s".formatted(lockKey));
+            log.debug("작업 완료 후 Lock을 해제합니다. Key: {}", lockKey);
         }
-
     }
 
-    // redis에 메니페스트를 저장
+    // redis에 매니페스트 이력과 현재 상태를 저장
     void addToRedis(String traceId, String resolution ,RecordMediaToRedisDTO recordMediaToRedisDTO){
         redisMediaService.pushHistory(traceId, resolution, recordMediaToRedisDTO, 10);
         redisMediaService.saveState(traceId, resolution, recordMediaToRedisDTO);
     }
 
-    // 딜레이를 설정해서 queue 에 입력
+    // 다음 모니터링 작업을 위해 지연 메시지를 전송
     void sendDelay(CheckMediaManifestCmd cmd){
         Instant now = Instant.now();
-        // 기본 딜레이는 5초
-        final long base = 5_000L;
+        final long baseDelay = 5_000L; // 기본 딜레이 5초
 
-        Instant prevDue = cmd.publishTime() != null ? cmd.publishTime() : Instant.now();
-        Instant nextDue = prevDue.plusMillis(base);
+        Instant prevDue = cmd.publishTime() != null ? cmd.publishTime() : now;
+        Instant nextDue = prevDue.plusMillis(baseDelay);
         long skew = Math.floorMod(cmd.traceId().hashCode(), 700); // 0~699ms 고정 지터
         nextDue = nextDue.plusMillis(skew);
-        final long delay = Math.max(Duration.between(Instant.now(), nextDue).toMillis(),100L);
 
-        CheckMediaManifestCmd newcmd;
-        if((now.toEpochMilli() > nextDue.toEpochMilli()) || (delay == 100L)){
-            newcmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, now, cmd.traceId());
-            log.warn("시간이 많이 다르네잉...");
-            rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.WORK_STAGE1, newcmd);
+        final long delay = Math.max(Duration.between(now, nextDue).toMillis(), 100L);
+
+        CheckMediaManifestCmd newCmd;
+        // 지연 시간이 너무 길거나, 이미 시간이 지났으면 즉시 실행
+        if((now.isAfter(nextDue)) || (delay <= 100L)){
+            newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, now, cmd.traceId());
+            log.warn("스케줄이 지연되어 즉시 실행합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
+            rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, newCmd);
             return;
         }
-        log.info("duration: " + String.valueOf(delay));
 
-        newcmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId());
-        String delayQueue = getDelayQueue(delay);
-        rabbit.convertAndSend("", delayQueue, newcmd, m -> {
+        log.info("{}ms 후 다음 작업을 스케줄링합니다.", delay);
+        newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId());
+        String delayRoutingKey = getDelayRoutingKey(delay);
+
+        // EX_DELAY Exchange로 메시지를 보내, TTL이 설정된 큐로 들어가게 함
+        rabbit.convertAndSend(RabbitNames.EX_DELAY, delayRoutingKey, newCmd, m -> {
             m.getMessageProperties().setExpiration(String.valueOf(delay));
-            long nowLong = System.currentTimeMillis();
-            m.getMessageProperties().setHeader("x-sent-at", nowLong);
-            m.getMessageProperties().setHeader("x-due-at", nowLong + delay);
             return m;
         });
     }
 
-    private String getDelayQueue(long delayMs) {
+    // 지연 시간에 따라 적절한 라우팅 키를 반환
+    private String getDelayRoutingKey(long delayMs) {
         return switch((int)(delayMs / 1000)) {
-            case 0, 1 -> RabbitNames.ONLY_DELAY_QUEUE_1S;
-            case 2 -> RabbitNames.ONLY_DELAY_QUEUE_2S;
-            case 3 -> RabbitNames.ONLY_DELAY_QUEUE_3S;
-            case 4 -> RabbitNames.ONLY_DELAY_QUEUE_4S;
-            default -> RabbitNames.ONLY_DELAY_QUEUE;
+            case 0, 1 -> RabbitNames.RK_DELAY_1S;
+            case 2 -> RabbitNames.RK_DELAY_2S;
+            case 3 -> RabbitNames.RK_DELAY_3S;
+            case 4 -> RabbitNames.RK_DELAY_4S;
+            default -> RabbitNames.RK_DELAY_DEFAULT;
         };
     }
-
-//    // validate 테스트를 위해 메시지를 전달
-//    void sendMessageToValid(String traceId, String resolution){
-//        CheckValidDTO send = new CheckValidDTO(traceId, resolution);
-//        rabbit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.RK_VALID, send);
-//    }
-
 }

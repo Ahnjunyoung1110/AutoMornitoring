@@ -38,17 +38,12 @@ public class MonitoringServiceImpl implements MonitoringService {
 
         if(first){
             // queue에 입력
-            rabit.convertAndSend(RabbitNames.EX_PIPELINE, RabbitNames.WORK_STAGE1, cmd);
+            rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
             log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
         }
         else{
             log.info("이미 모니터링을 수행중입니다.");
         }
-
-
-        // redis 변경
-        redis.setValues(dto.traceId(), "MONITORING");
-        redis.setValues(dto.manifestUrl(), "MONITORING");
     }
 
     // 추후 구현

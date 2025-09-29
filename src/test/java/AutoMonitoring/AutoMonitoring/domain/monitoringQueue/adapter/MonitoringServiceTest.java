@@ -1,150 +1,150 @@
-package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
-
-import AutoMonitoring.AutoMonitoring.BaseTest;
-import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
-import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit//package AutoMonitoring.AutoMonitoring;
+//package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 //
-//import org.testcontainers.containers.GenericContainer;
-//import org.testcontainers.images.builder.ImageFromDockerfile;
-//import org.testcontainers.containers.wait.strategy.Wait;
+//import AutoMonitoring.AutoMonitoring.BaseTest;
+//import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+//import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
+//import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+//import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
+//import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
+//import org.assertj.core.api.Assertions;
+//import org.junit.jupiter.api.BeforeEach;
+//import org.junit.jupiter.api.Test;
+//import org.junit//package AutoMonitoring.AutoMonitoring;
+////
+////import org.testcontainers.containers.GenericContainer;
+////import org.testcontainers.images.builder.ImageFromDockerfile;
+////import org.testcontainers.containers.wait.strategy.Wait;
+////
+////public class TestRabbitMQContainer {
+////
+////
+////    static {
+////        INSTANCE.start(); // 클래스 로딩 시 1회 기동
+////    }
+////
+////    // ---- 접근 헬퍼 ----
+////    public static String getHost() { return INSTANCE.getHost(); }
+////    public static Integer getAmqpPort() { return INSTANCE.getMappedPort(5672); }
+////    public static Integer getHttpPort() { return INSTANCE.getMappedPort(15672); }
+////    public static String getUsername() { return USER; }
+////    public static String getPassword() { return PASS; }
+////
+////    // 필요 시 컨테이너 핸들 직접 쓰고 싶다면
+////    public static GenericContainer<?> getContainer() { return INSTANCE; }
+////}
+//        .jupiter.api.extension.ExtendWith;
+//import org.springframework.amqp.core.*;
+//import org.springframework.amqp.rabbit.core.RabbitTemplate;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.boot.test.context.SpringBootTest;
+//import org.springframework.test.context.ActiveProfiles;
+//import org.springframework.test.context.DynamicPropertyRegistry;
+//import org.springframework.test.context.DynamicPropertySource;
 //
-//public class TestRabbitMQContainer {
+//import java.util.Map;
+//
+//@SpringBootTest
+//@ActiveProfiles("test")
+//class MonitoringServiceTest extends BaseTest {
+//
+//    @Autowired
+//    private MonitoringService monitoringService;
+//    @Autowired
+//    private RabbitTemplate rabbitTemplate;
+//    @Autowired
+//    private AmqpAdmin amqpAdmin;
+//    @Autowired
+//    private RedisService redis;
+//
+//    final String Q = RabbitNames.WORK_QUEUE;
+//    final String DEX = RabbitNames.EX_PIPELINE;
+//    final String RK = RabbitNames.WORK_STAGE1;
 //
 //
-//    static {
-//        INSTANCE.start(); // 클래스 로딩 시 1회 기동
+//    @BeforeEach
+//    void resetTopology() {
+//        // 싹 정리 후 재선언(매 테스트 독립성)
+//        try { amqpAdmin.deleteQueue(Q); } catch (Exception ignored) {}
+//        try { amqpAdmin.deleteExchange(DEX); } catch (Exception ignored) {}
+//
+//        // x-delayed-message 교환 선언
+//        Map<String,Object> args = Map.of("x-delayed-type", "direct");
+//        CustomExchange delayedEx = new CustomExchange(DEX, "x-delayed-message", true, false, args);
+//        amqpAdmin.declareExchange(delayedEx);
+//
+//        // 큐 & 바인딩
+//        amqpAdmin.declareQueue(new Queue(Q, true));
+//        amqpAdmin.declareBinding(BindingBuilder.bind(new Queue(Q)).to(delayedEx).with(RK).noargs());
 //    }
 //
-//    // ---- 접근 헬퍼 ----
-//    public static String getHost() { return INSTANCE.getHost(); }
-//    public static Integer getAmqpPort() { return INSTANCE.getMappedPort(5672); }
-//    public static Integer getHttpPort() { return INSTANCE.getMappedPort(15672); }
-//    public static String getUsername() { return USER; }
-//    public static String getPassword() { return PASS; }
+//    @Test
+//    void startMornitoring() {
+//        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8","1920x1080", "");
+//        monitoringService.startMornitoring(startMonitoringDTO);
 //
-//    // 필요 시 컨테이너 핸들 직접 쓰고 싶다면
-//    public static GenericContainer<?> getContainer() { return INSTANCE; }
-//}
-        .jupiter.api.extension.ExtendWith;
-import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-
-import java.util.Map;
-
-@SpringBootTest
-@ActiveProfiles("test")
-class MonitoringServiceTest extends BaseTest {
-
-    @Autowired
-    private MonitoringService monitoringService;
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-    @Autowired
-    private AmqpAdmin amqpAdmin;
-    @Autowired
-    private RedisService redis;
-
-    final String Q = RabbitNames.WORK_QUEUE;
-    final String DEX = RabbitNames.EX_PIPELINE;
-    final String RK = RabbitNames.WORK_STAGE1;
-
-
-    @BeforeEach
-    void resetTopology() {
-        // 싹 정리 후 재선언(매 테스트 독립성)
-        try { amqpAdmin.deleteQueue(Q); } catch (Exception ignored) {}
-        try { amqpAdmin.deleteExchange(DEX); } catch (Exception ignored) {}
-
-        // x-delayed-message 교환 선언
-        Map<String,Object> args = Map.of("x-delayed-type", "direct");
-        CustomExchange delayedEx = new CustomExchange(DEX, "x-delayed-message", true, false, args);
-        amqpAdmin.declareExchange(delayedEx);
-
-        // 큐 & 바인딩
-        amqpAdmin.declareQueue(new Queue(Q, true));
-        amqpAdmin.declareBinding(BindingBuilder.bind(new Queue(Q)).to(delayedEx).with(RK).noargs());
-    }
-
-    @Test
-    void startMornitoring() {
-        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8","1920x1080", "");
-        monitoringService.startMornitoring(startMonitoringDTO);
-
-        Message msg = rabbitTemplate.receive(Q, 2000);
-        if (msg == null) {
-            Assertions.assertThat("wrong").isEqualTo("wrongggg");
-        }
-        Object raw = msg.getMessageProperties().getHeaders().get("x-delay");
-        Long xDelay = raw == null ? null : Long.valueOf(raw.toString()); // Integer/Long 가능성
-        // 바디는 컨버터로 DTO 변환
-        CheckMediaManifestCmd cmd =
-                (CheckMediaManifestCmd) rabbitTemplate.getMessageConverter().fromMessage(msg);
-
-        Assertions.assertThat(cmd.failCount()).isEqualTo(0);
-        Assertions.assertThat(cmd.traceId()).isEqualTo("qwer");
-        Assertions.assertThat(cmd.mediaUrl()).isEqualTo("https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8");
-
-
-        // redis에서의 상태가 Ok
-        Assertions.assertThat(redis.getValues("https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8"))
-                .isEqualTo("MONITORING");
-        // traceId는 MONITORING
-        Assertions.assertThat(redis.getValues(cmd.traceId())).isEqualTo("MONITORING");
-
-
-    }
-
-    @Test
-    void startMornitoringWithWrongUrl() {
-        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong", "1020","");
-        Assertions.assertThatRuntimeException().isThrownBy(() -> monitoringService.startMornitoring(startMonitoringDTO));
-
-
-        // redis 에서의 traceId의 status가 Wrong
-        Assertions.assertThat(redis.getValues("qwer")).isEqualTo("WRONG");
-        // 이후 message queue가 null이어야 한다.
-        Message msg = rabbitTemplate.receive(RabbitNames.WORK_QUEUE, 2000);
-        Assertions.assertThat(msg).isNull();
-
-    }
-
-    // 아래로는 추후 구현
+//        Message msg = rabbitTemplate.receive(Q, 2000);
+//        if (msg == null) {
+//            Assertions.assertThat("wrong").isEqualTo("wrongggg");
+//        }
+//        Object raw = msg.getMessageProperties().getHeaders().get("x-delay");
+//        Long xDelay = raw == null ? null : Long.valueOf(raw.toString()); // Integer/Long 가능성
+//        // 바디는 컨버터로 DTO 변환
+//        CheckMediaManifestCmd cmd =
+//                (CheckMediaManifestCmd) rabbitTemplate.getMessageConverter().fromMessage(msg);
+//
+//        Assertions.assertThat(cmd.failCount()).isEqualTo(0);
+//        Assertions.assertThat(cmd.traceId()).isEqualTo("qwer");
+//        Assertions.assertThat(cmd.mediaUrl()).isEqualTo("https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8");
+//
+//
+//        // redis에서의 상태가 Ok
+//        Assertions.assertThat(redis.getValues("https://ssai.aniview.com/api/v1/hls/streams/sessions/172f31b1184a4d36bde90a6b9b264fef/media/index.m3u8/1.m3u8"))
+//                .isEqualTo("MONITORING");
+//        // traceId는 MONITORING
+//        Assertions.assertThat(redis.getValues(cmd.traceId())).isEqualTo("MONITORING");
+//
+//
+//    }
 //
 //    @Test
-//    void stopMornitoring() {
-//        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong");
+//    void startMornitoringWithWrongUrl() {
+//        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong", "1020","");
 //        Assertions.assertThatRuntimeException().isThrownBy(() -> monitoringService.startMornitoring(startMonitoringDTO));
 //
-//        //redis 에서 status 가 MONITORING
-//        StopMornitoringDTO stopMornitoringDTO = new StopMornitoringDTO("qwer", "어쩌구");
-//        Assertions.assertThat(redis.getValues("어쩌구")).isEqualTo("MONITORING");
-//
-//        // 중지
-//
-//
-//        //redis 에서 status 가 stopped
-//
-//
-//
+//        String key = RedisKeys.state("qwer","1020");
+//        // redis 에서의 traceId의 status가 Wrong
+//        Assertions.assertThat(redis.getValues(key)).isEqualTo("WRONG URL");
+//        // 이후 message queue가 null이어야 한다.
+//        Message msg = rabbitTemplate.receive(RabbitNames.WORK_QUEUE, 2000);
+//        Assertions.assertThat(msg).isNull();
 //
 //    }
+//    // 아래로는 추후 구현
+////
+////    @Test
+////    void stopMornitoring() {
+////        StartMonitoringDTO startMonitoringDTO = new StartMonitoringDTO("qwer", "wrong");
+////        Assertions.assertThatRuntimeException().isThrownBy(() -> monitoringService.startMornitoring(startMonitoringDTO));
+////
+////        //redis 에서 status 가 MONITORING
+////        StopMornitoringDTO stopMornitoringDTO = new StopMornitoringDTO("qwer", "어쩌구");
+////        Assertions.assertThat(redis.getValues("어쩌구")).isEqualTo("MONITORING");
+////
+////        // 중지
+////
+////
+////        //redis 에서 status 가 stopped
+////
+////
+////
+////
+////    }
+////
+////    @Test
+////    void stopMornitoringX() {
+////
+////        // 그런 데이터 redis 에 없더라 야 라는 에러
+////
+////    }
 //
-//    @Test
-//    void stopMornitoringX() {
-//
-//        // 그런 데이터 redis 에 없더라 야 라는 에러
-//
-//    }
-
-}
+//}

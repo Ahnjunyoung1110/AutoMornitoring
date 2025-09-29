@@ -1,20 +1,85 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
-import lombok.RequiredArgsConstructor;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.DbCommand;
+import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.Instant;
+import java.util.Collections;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
-@RequiredArgsConstructor
-class ProbeWorkerTest extends BaseTest {
-    private final ProbeWorker probeWorker;
+class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
+
+    @Autowired // 실제 객체 주입
+    private ProbeWorker probeWorker;
+
+    @Autowired // 실제 RabbitTemplate 주입 (Testcontainer)
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired // 실제 RedisService 주입 (Testcontainer)
+    private RedisService redisService;
+
+    @MockitoBean // MediaProbe는 실제 ffprobe를 실행하므로 MockBean으로 대체
+    private MediaProbe mediaProbe;
+
+    @AfterEach
+    void tearDown() {
+        // 테스트 간 독립성을 위해 Redis 데이터 정리
+        redisService.deleteValues("test-trace-id");
+        // 큐에 메시지가 남아있을 경우 다음 테스트에 영향을 주지 않도록 비워줌
+        rabbitTemplate.receive(RabbitNames.Q_STAGE2);
+    }
 
     @Test
-    void handle() {
-        probeWorker.handle(new ProbeCommand("1234", "ads.its-newid.net/api/manifest.m3u8?tp=lg_channels&channel_name=고독한미식가&channel_id=newid_091&mpf=687af619-39af1962-d77ce6a6&apikey=48230e6b-1cea0097-15975f93-39af1962&auth=f637d864-f0e39a59-0745dbf5-53a167da&ads.live=1&ads.deviceid=e924943d-4c9a-8553-6455-ee6aab7e155a&ads.ifa=2443a3c5-5e4e-565a-4a63-022848e9a4c0&ads.ifatype=lgwebostvadid&ads.lat=0&ads.donotsell=&ads.ua=Mozilla%2F5.0 (Web0S%3B Linux%2FSmartTV) AppleWebKit%2F537.36 (KHTML%2C like Gecko) Chrome%2F53.0.2785.34 Safari%2F537.36 DMOST%2F2.0.1 (%3B LGE%3B webOSTV%3B WEBOS4.10.1 05.40.90%3B W4_m16p3%3B)&ads.ip=125.130.79.4&ads.gdpr=0&ads.gdpr_consent=&ads.country=KR&ads.us_privacy=&ads.appstoreurl=https%3A%2F%2Fkr.lgappstv.com%2Fmain%2Ftvapp%2Fdetail%3FappId%3D948993&ads.bundleid=948993&ads.appname=lgchannels&ads.appversion=3.3.36-2&ads.devicetype=Connected TV&ads.devicemake=LG_ELECTRONICS_LG&ads.devicemodel=OLED55B9FNA&ads.targetad=1&ads.fck=171&ads.viewsize=0", ""));
-        System.out.println();
+    @DisplayName("Probe 성공 시, 다음 단계 메시지를 Q_STAGE2로 발행해야 한다")
+    void handle_probe() {
+        // given: 준비
+        ProbeCommand command = new ProbeCommand("test-trace-id", "http://test.url", "test-agent");
+        ProbeDTO fakeProbeResult = new ProbeDTO(command.traceId(), Instant.now(), command.masterUrl(), command.UserAgent(), "hls", 0.0, 0, Collections.emptyList(), Collections.emptyList());
+        given(mediaProbe.probe(anyString(), anyString())).willReturn(fakeProbeResult);
+
+        // when: 실행
+        probeWorker.handle(command);
+
+        // then: 검증
+        // Q_STAGE2에서 메시지를 실제로 수신하여 내용 검증
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STAGE2, 2000);
+        assertThat(received).isInstanceOf(DbCommand.class);
+        assertThat(((DbCommand) received).traceId()).isEqualTo("test-trace-id");
+    }
+
+    @Test
+    @DisplayName("Probe 실패 시, Redis에 PROBE_FAILED 상태를 기록하고 메시지를 발행하지 않아야 한다")
+    void handle_probefail_PROBE_FAILED_Record() {
+        // given: 준비
+        ProbeCommand command = new ProbeCommand("test-trace-id", "http://invalid.url", "test-agent");
+        given(mediaProbe.probe(anyString(), anyString())).willThrow(new RuntimeException("Probe failed"));
+
+        // when: 실행
+        probeWorker.handle(command);
+
+        // then: 검증
+        // Redis에 PROBE_FAILED 상태가 기록되었는지 확인
+        String status = redisService.getValues("test-trace-id");
+        assertThat(status).isEqualTo("PROBE_FAILED");
+
+        // Q_STAGE2에 메시지가 발행되지 않았는지 확인
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STAGE2);
+        assertThat(received).isNull();
     }
 }
