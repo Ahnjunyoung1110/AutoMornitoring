@@ -51,7 +51,7 @@ public class MonitoringWorker {
 
 
     // 주기적인 모니터링 작업을 수행. 실패 시 재시도 큐로 보냄.
-    @RabbitListener(queues = RabbitNames.Q_WORK, concurrency = "5", containerFactory="probeContainerFactory")
+    @RabbitListener(id = "Monitoring_worker",queues = RabbitNames.Q_WORK, concurrency = "5", containerFactory="probeContainerFactory")
     void receiveMessage(CheckMediaManifestCmd cmd){
         log.info("모니터링 작업 수신. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
 

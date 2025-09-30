@@ -32,7 +32,7 @@ public class DelayMonitoringWorker {
     private final RabbitTemplate rabbit;
 
     // 메시지를 받아 처리하는 함수, 처리에 실패하면 1초 후 다시 큐에 넣는다.
-    @RabbitListener(queues = RabbitNames.Q_WORK_DLX)
+    @RabbitListener(id = "Retry_queue",queues = RabbitNames.Q_WORK_DLX)
     void receiveMessage(Message m , CheckMediaManifestCmd cmd){
         // x-death 헤더에서 재시도 횟수를 계산 (0-indexed 이므로 0부터 시작)
         int attempt = deathCountForQueue(m, RabbitNames.Q_RETRY_DELAY_1S);

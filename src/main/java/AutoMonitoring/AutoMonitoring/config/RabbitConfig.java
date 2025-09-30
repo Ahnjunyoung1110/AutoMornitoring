@@ -75,8 +75,8 @@ public class RabbitConfig {
     // 3. Monitoring 토폴로지 (핵심 루프)
     @Bean Queue workQueue() {
         return QueueBuilder.durable(RabbitNames.Q_WORK)
-                .deadLetterExchange(deadLetterExchange().getName())
-                .deadLetterRoutingKey("monitoring.work.failed") // 실패 시 DLX로 보낼 라우팅 키
+                .deadLetterExchange(RabbitNames.EX_MONITORING)
+                .deadLetterRoutingKey(RabbitNames.RK_WORK_DLX) // 실패 시 DLX로 보낼 라우팅 키
                 .build();
     }
     @Bean Binding bWork() { return BindingBuilder.bind(workQueue()).to(monitoringExchange()).with(RabbitNames.RK_WORK); }
@@ -106,7 +106,7 @@ public class RabbitConfig {
     @Bean Queue workDlxQueue() { // 실패한 메시지가 잠시 머무는 곳 (재시도 로직 수행)
         return QueueBuilder.durable(RabbitNames.Q_WORK_DLX)
                 .deadLetterExchange(deadLetterExchange().getName())
-                .deadLetterRoutingKey("monitoring.retry.failed") // 재시도도 최종 실패하면 DLX로
+                .deadLetterRoutingKey(RabbitNames.RK_DEAD) // 재시도도 최종 실패하면 DLX로
                 .build();
     }
     @Bean Binding bWorkDlx() { return BindingBuilder.bind(workDlxQueue()).to(monitoringExchange()).with(RabbitNames.RK_WORK_DLX); }

@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
     public void ioException(IOException e){
         String traceId = e.getMessage().split(" ")[0];
         log.warn("%s 에서 문제가 발생했습니다. %s".formatted(traceId ,e.getMessage().split(" ")[1]));
+        log.warn(e.getMessage());
 
     }
 
@@ -35,6 +36,7 @@ public class GlobalExceptionHandler {
     public void runtimeException(RuntimeException e){
         String traceId = e.getMessage().split(" ")[0];
         log.warn("%s 에서 문제가 발생했습니다. %s".formatted(traceId ,e.getMessage().split(" ")[1]));
+        log.warn(e.getMessage());
 
     }
 }

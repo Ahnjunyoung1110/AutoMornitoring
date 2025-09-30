@@ -1,6 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
@@ -9,6 +10,7 @@ import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,8 @@ public class MonitoringServiceImpl implements MonitoringService {
 
     private final RedisService redis;
 
+    private final UrlValidateCheck urlValidateCheck;
+
     @Override
     public void startMornitoring(StartMonitoringDTO dto) {
 
@@ -33,8 +37,16 @@ public class MonitoringServiceImpl implements MonitoringService {
         String key = RedisKeys.queueFlag(dto.traceId(), dto.resolution());
         Duration ttl = Duration.ofMinutes(3);
 
-
+        boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
+        if(!isValidUrl){
+            log.info("URL이 유효하지 않습니다.");
+            String stateKey = RedisKeys.state(dto.traceId(), dto.resolution());
+            redis.setValues(stateKey, "WRONG_URL");
+            throw new AmqpRejectAndDontRequeueException("Wrong sub Url");
+        }
         boolean first = redis.getOpsAbsent(key, "1", ttl);
+
+
 
         if(first){
             // queue에 입력
