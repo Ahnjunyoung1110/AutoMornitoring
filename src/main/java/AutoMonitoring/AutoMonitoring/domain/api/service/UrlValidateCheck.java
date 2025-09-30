@@ -18,10 +18,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 /*  정상적으로 파일이 있는지 확인하는 함수 */
 public class UrlValidateCheck {
-    private static final HttpClient http = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .connectTimeout(Duration.ofMillis(1500)) // 연결 지연 방지
-            .build();
+    private final HttpClient http;
 
     // 주어진 URL로 HEAD 요청을 보내고 2초 이내에 정상 응답이면 true, 아니면 falsermsep
     public boolean check(String paramUrl){
@@ -38,7 +35,7 @@ public class UrlValidateCheck {
 
             HttpRequest request = HttpRequest.newBuilder(URI.create(escapedUrl))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .timeout(Duration.ofSeconds(2))
+                    .timeout(Duration.ofSeconds(5))
                     .build();
 
             long t0 = System.nanoTime();

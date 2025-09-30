@@ -26,7 +26,7 @@ public class ProbeWorker {
         ProbeDTO responseDTO;
         try {
             log.info("Probing master URL: {}", cmd.masterUrl());
-            responseDTO = mediaProbe.probe(cmd.masterUrl(), cmd.UserAgent());
+            responseDTO = mediaProbe.probe(cmd);
             log.info("ffprobe로 정보 가져오기 완료");
         } catch (Exception e) {
             log.error("Failed to probe master URL. TraceId: {}, Error: {}", cmd.traceId(), e.getMessage());

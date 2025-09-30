@@ -12,17 +12,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
-@SpringBootTest
 class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
 
     @Autowired // 실제 객체 주입
@@ -51,7 +49,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
         // given: 준비
         ProbeCommand command = new ProbeCommand("test-trace-id", "http://test.url", "test-agent");
         ProbeDTO fakeProbeResult = new ProbeDTO(command.traceId(), Instant.now(), command.masterUrl(), command.UserAgent(), "hls", 0.0, 0, Collections.emptyList(), Collections.emptyList());
-        given(mediaProbe.probe(anyString(), anyString())).willReturn(fakeProbeResult);
+        given(mediaProbe.probe(any(ProbeCommand.class))).willReturn(fakeProbeResult);
 
         // when: 실행
         probeWorker.handle(command);
@@ -68,7 +66,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
     void handle_probefail_PROBE_FAILED_Record() {
         // given: 준비
         ProbeCommand command = new ProbeCommand("test-trace-id", "http://invalid.url", "test-agent");
-        given(mediaProbe.probe(anyString(), anyString())).willThrow(new RuntimeException("Probe failed"));
+        given(mediaProbe.probe(any(ProbeCommand.class))).willThrow(new RuntimeException("Probe failed"));
 
         // when: 실행
         probeWorker.handle(command);

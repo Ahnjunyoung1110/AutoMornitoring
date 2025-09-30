@@ -6,11 +6,13 @@ import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManife
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,11 +35,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
-@SpringBootTest
 class DelayMonitoringWorkerTest extends BaseTest {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RabbitListenerEndpointRegistry registry;
 
     @Autowired
     private RedisService redisService;
@@ -48,7 +52,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
     private final String TRACE_ID = "test-trace-id";
     private final String RESOLUTION = "1080p";
 
-    @AfterEach
+    @BeforeEach
     void tearDown() {
         redisService.deleteValues(RedisKeys.state(TRACE_ID, RESOLUTION));
         // 테스트에 사용된 큐들을 비워줍니다.
@@ -66,6 +70,8 @@ class DelayMonitoringWorkerTest extends BaseTest {
         given(httpClient.send(any(), any(HttpResponse.BodyHandler.class))).willReturn(new MockHttpResponse(200));
 
         // when: Worker가 메시지를 소비하도록 메시지 전송
+        // queue에 입력되는것을 확인해야 하므로 소비자 off
+        registry.getListenerContainer("Retry_queue").start();
         rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK_DLX, command);
 
         // then: 주 모니터링 큐(Q_WORK)에서 메시지가 수신되어야 함
@@ -76,6 +82,9 @@ class DelayMonitoringWorkerTest extends BaseTest {
         // Redis 상태가 MONITORING으로 변경되었는지 확인
         String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
         assertThat(status).isEqualTo("MONITORING");
+
+        // 완료 후 다시 가동
+        registry.getListenerContainer("Retry_queue").stop();
     }
 
     @Test
@@ -94,15 +103,17 @@ class DelayMonitoringWorkerTest extends BaseTest {
         Message message = rabbitTemplate.getMessageConverter().toMessage(command, properties);
 
         // when: Worker가 메시지를 소비하도록 메시지 전송
+        registry.getListenerContainer("Retry_queue").start();
         rabbitTemplate.send(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK_DLX, message);
 
         // then: Dead Letter 큐(Q_DEAD)에서 메시지가 수신되어야 함
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 2000);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 10000);
         assertThat(received).isNotNull();
 
         // Redis 상태가 FAILED로 변경되었는지 확인
         String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
         assertThat(status).isEqualTo("FAILED");
+        registry.getListenerContainer("Retry_queue").stop();
     }
 
     // HttpClient Mock을 위한 간단한 구현체

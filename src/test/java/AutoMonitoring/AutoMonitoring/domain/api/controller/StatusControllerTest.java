@@ -1,9 +1,11 @@
 package AutoMonitoring.AutoMonitoring.domain.api.controller;
 
 import AutoMonitoring.AutoMonitoring.domain.api.service.StatusService;
+import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,6 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(StatusController.class) // StatusController만 테스트
+@AutoConfigureMockMvc(addFilters = false)
 class StatusControllerTest {
 
     @Autowired
@@ -22,6 +25,9 @@ class StatusControllerTest {
 
     @MockitoBean
     private StatusService statusService; // 서비스 계층은 MockBean으로 대체
+
+    @MockitoBean
+    private RedisService redisService;
 
     @Test
     @DisplayName("GET /api/status/{traceId}: traceId의 메인 상태를 조회한다")

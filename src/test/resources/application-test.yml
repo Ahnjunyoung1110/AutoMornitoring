@@ -1,0 +1,3 @@
+rabbit:
+  listeners:
+    auto-startup: false

@@ -1,6 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.application;
 
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
+import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
 import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.domain.program.dto.StreamDTO;
 import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
@@ -37,11 +38,11 @@ public class MediaProbeImpl implements MediaProbe {
     private String ffprobePath;
 
     @Override
-    public ProbeDTO probe(String masterManifestUrl, String UserAgent) {
+    public ProbeDTO probe(ProbeCommand probeCommand) {
         try {
 
 
-            String url = masterManifestUrl.trim();
+            String url = probeCommand.masterUrl().trim();
             // 인코딩 된 문장인지 확인 안되어있다면 인코딩
             if (!url.matches(".*%[0-9A-Fa-f]{2}.*")){
                 url = url.replace( "[", "%5B").replace(  "]", "%5D");
@@ -118,10 +119,10 @@ public class MediaProbeImpl implements MediaProbe {
 
             // 5) ProbeDTO 생성
             return new ProbeDTO(
-                    java.util.UUID.randomUUID().toString().replace("-", ""),
+                    probeCommand.traceId(),
                     Instant.now(),
-                    masterManifestUrl,
-                    UserAgent,
+                    probeCommand.masterUrl(),
+                    probeCommand.UserAgent(),
                     formatName,
                     durationSec,
                     overallBitrate,

@@ -29,7 +29,7 @@ public class RedisMediaServiceImpl implements RedisMediaService {
 
     @Override
     public RecordMediaToRedisDTO getState(String traceId, String resolution) {
-        String key = RedisKeys.state(traceId,resolution);
+        String key = RedisKeys.hashState(traceId,resolution);
         Map<Object, Object> h = redis.opsForHash().entries(key);
         if (h == null || h.isEmpty()) return null;
         return fromHash(h);
