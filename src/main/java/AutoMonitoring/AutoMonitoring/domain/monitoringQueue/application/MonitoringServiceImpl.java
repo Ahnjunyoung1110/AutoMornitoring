@@ -39,7 +39,7 @@ public class MonitoringServiceImpl implements MonitoringService {
 
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
         if(!isValidUrl){
-            log.info("URL이 유효하지 않습니다.");
+            log.info("URL이 유효하지 않습니다." + dto.manifestUrl());
             String stateKey = RedisKeys.state(dto.traceId(), dto.resolution());
             redis.setValues(stateKey, "WRONG_URL");
             throw new AmqpRejectAndDontRequeueException("Wrong sub Url");

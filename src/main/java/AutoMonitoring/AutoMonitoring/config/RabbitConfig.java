@@ -18,7 +18,7 @@ public class RabbitConfig {
     //<editor-fold desc="Basic Configs">
     @Bean
     public MessageConverter jacksonMessageConverter(ObjectMapper om){
-        var conv = new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter();
+        var conv = new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter(om);
         conv.setCreateMessageIds(true);
         return conv;
     }
@@ -49,6 +49,7 @@ public class RabbitConfig {
         configurer.configure(factory, connectionFactory);
         factory.setPrefetchCount(10);
         factory.setDefaultRequeueRejected(false);
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
         return factory;
     }
     //</editor-fold>

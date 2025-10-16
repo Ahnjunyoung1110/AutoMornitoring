@@ -107,6 +107,19 @@ class ValidateCheckServiceTest extends BaseTest {
         assertThat(isValid).isTrue();
     }
 
+    @Test
+    @DisplayName("히스토리가 비어있을 때 유효성 검사에 통과한다.")
+    void checkValidation_WhenHistoryIsEmpty_ShouldReturnTrue() {
+        // given
+        // 히스토리가 비어있는 상태
+
+        // when
+        boolean isValid = validateCheckService.checkValidation(traceId, resolution);
+
+        // then
+        assertThat(isValid).isTrue();
+    }
+
     private RecordMediaToRedisDTO createRecord(long seq) {
         return new RecordMediaToRedisDTO(
                 Instant.now(),

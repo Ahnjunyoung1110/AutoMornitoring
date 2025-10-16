@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+@EnableRabbit
 class MonitoringServiceTest extends BaseTest {
 
     @Autowired
@@ -55,7 +57,6 @@ class MonitoringServiceTest extends BaseTest {
 
         // when
         monitoringService.startMornitoring(dto);
-        registry.getListenerContainer("Monitoring_worker").start();
 
         // then
         // 1. 메시지가 딜레이 큐로 발행되었는지 검증
@@ -64,8 +65,6 @@ class MonitoringServiceTest extends BaseTest {
         assertThat(receivedCmd.traceId()).isEqualTo(dto.traceId());
         assertThat(receivedCmd.mediaUrl()).isEqualTo(dto.manifestUrl());
         assertThat(receivedCmd.failCount()).isZero();
-
-        registry.getListenerContainer("Monitoring_worker").stop();
     }
 
     @Test

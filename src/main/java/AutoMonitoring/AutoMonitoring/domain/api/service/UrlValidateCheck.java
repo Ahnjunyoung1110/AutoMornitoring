@@ -20,34 +20,46 @@ import java.util.concurrent.TimeUnit;
 public class UrlValidateCheck {
     private final HttpClient http;
 
-    // 주어진 URL로 HEAD 요청을 보내고 2초 이내에 정상 응답이면 true, 아니면 falsermsep
+    // 주어진 URL로 HEAD 요청을 보내고 5초 이내에 정상 응답이면 true, 아니면 falsermsep
     public boolean check(String paramUrl){
-        try{
-
+        try {
             String url = paramUrl.trim();
-            // 인코딩 된 문장인지 확인 안되어있다면 인코딩
-            if (!url.matches(".*%[0-9A-Fa-f]{2}.*")){
-                url = url.replace( "[", "%5B").replace(  "]", "%5D");
+
+            // 대괄호 처리를 포함한 안전 인코딩
+            if (!url.matches(".*%[0-9A-Fa-f]{2}.*")) {
+                url = url.replace("[", "%5B").replace("]", "%5D");
                 url = UriComponentsBuilder.fromUriString(url).build(false).toUriString();
             }
-            // '[', ']' 는 인코딩 되면 요청이 안되므로 재 수정
-            String escapedUrl = url.replace( "%5B","[").replace( "%5D", "]");
+            // 일부 엔드포인트 호환 위해 대괄호 원복
+            String escapedUrl = url.replace("%5B", "[").replace("%5D", "]");
+
+            // HttpClient는 재사용(싱글턴) 권장. 여기선 예제 편의상 생성
+            HttpClient http = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
 
             HttpRequest request = HttpRequest.newBuilder(URI.create(escapedUrl))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .method("GET", HttpRequest.BodyPublishers.noBody())   // GET(본문 없음)
                     .timeout(Duration.ofSeconds(5))
+                    // 전송량 최소화(가능하면 압축 끄기, 바디 1바이트만 요청 시도)
+                    .header("Accept", "*/*")
+                    .header("Accept-Encoding", "identity")
+                    .header("Range", "bytes=0-0")
+                    // 일부 CDN/Origin이 UA 없으면 4xx를 줄 수 있음
+                    .header("User-Agent", "AutoMonitoring/1.0")
                     .build();
 
             long t0 = System.nanoTime();
-
-            HttpResponse<Void> response = http.send(request, HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = http.send(request, HttpResponse.BodyHandlers.discarding());
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
 
-            if (elapsedMs > 4000) return false;
-            int code  = response.statusCode();
-            return code >= 200 && code < 400;
+            if (elapsedMs > 5000) return false;            // 타임아웃 가드(5s)
+            int code = resp.statusCode();
+            return (code >= 200 && code < 400);
 
-        } catch (Exception e){
+        } catch (Exception e) {
+            log.error("헤더 체크 실패: {}", e.toString());
             return false;
         }
     }

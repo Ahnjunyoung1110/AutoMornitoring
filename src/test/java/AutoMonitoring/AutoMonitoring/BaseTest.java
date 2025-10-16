@@ -25,7 +25,10 @@ import java.time.Duration;
 import java.util.Arrays;
 
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.rabbitmq.listener.simple.auto-startup=false",
+        "spring.rabbitmq.listener.direct.auto-startup=false"
+})
 @ActiveProfiles("test")
 @Slf4j
 public abstract class BaseTest {
