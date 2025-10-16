@@ -1,44 +1,25 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util.MonitoringJobHandler;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.ProgramInfo;
-import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Channel;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.boot.json.JacksonJsonParser;
-import org.springframework.boot.json.JsonParser;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import com.rabbitmq.client.Channel;
 import reactor.rabbitmq.ConsumeOptions;
 import reactor.rabbitmq.Receiver;
 import reactor.rabbitmq.Sender;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 
 @RequiredArgsConstructor
 @Component

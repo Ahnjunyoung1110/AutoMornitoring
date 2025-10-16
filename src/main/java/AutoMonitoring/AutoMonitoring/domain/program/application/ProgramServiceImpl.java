@@ -1,13 +1,11 @@
 package AutoMonitoring.AutoMonitoring.domain.program.application;
 
 import AutoMonitoring.AutoMonitoring.domain.program.adapter.ProgramService;
-import AutoMonitoring.AutoMonitoring.domain.program.entity.ProgramInfo;
+import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramAlreadyExistException;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramNotFoundException;
-import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.repository.ProgramRepo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;

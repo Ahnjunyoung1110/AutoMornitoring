@@ -1,18 +1,11 @@
 package AutoMonitoring.AutoMonitoring;
 
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.amqp.rabbit.listener.MessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.ApplicationListener;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -22,7 +15,6 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
-import java.util.Arrays;
 
 
 @SpringBootTest(properties = {
@@ -40,8 +32,6 @@ public abstract class BaseTest {
                     .withReuse(true)
                     .withExposedPorts(6379);
 
-    @Autowired
-    private StringRedisTemplate redis;
 
     @Autowired
     public RabbitListenerEndpointRegistry registry;
@@ -70,7 +60,6 @@ public abstract class BaseTest {
     @BeforeEach
     void resetState() throws Exception {
         // Redis, Rabbit 전체 초기화
-        var r = REDIS.execInContainer("redis-cli", "FLUSHALL");
         RABBIT.execInContainer("bash","-lc",
                 "for q in $(rabbitmqadmin --vhost=vh_test --format=tsv list queues name | tail -n +2); do " +
                         "  rabbitmqadmin --vhost=vh_test purge queue name=$q; " +

@@ -1,18 +1,15 @@
 package AutoMonitoring.AutoMonitoring.domain.program.mqworker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.program.adapter.ProgramService;
-import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.dto.DbCommand;
+import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.ProgramInfo;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor

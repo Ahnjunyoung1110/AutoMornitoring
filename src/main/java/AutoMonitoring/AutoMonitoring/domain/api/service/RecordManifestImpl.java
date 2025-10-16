@@ -8,8 +8,6 @@ import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.security.Key;
-
 @Service
 @RequiredArgsConstructor
 public class RecordManifestImpl implements RecordManifest {
