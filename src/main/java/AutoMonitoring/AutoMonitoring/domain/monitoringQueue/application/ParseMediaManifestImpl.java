@@ -1,9 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
 
     @Override
-    public RecordMediaToRedisDTO parse(String manifest, Duration getDurationMs, String traceId, String resolution) {
+    public CheckValidDTO parse(String manifest, Duration getDurationMs, String traceId, String resolution) {
         if (manifest == null) throw new IllegalArgumentException("파싱하려는 매니페스트가 존재하지 않습니다.");
 
         String m = manifest.replace("\r\n", "\n").trim();
@@ -119,7 +119,6 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                         .map(u -> extractTsName(stripQuery(u)))  // ← 여기서 파일명만
                         .toList()
         );
-        String tailUrisJson = toJsonArray(tailNames);
 
         // 3) hashNorm 계산 (정규화: 일부 태그 제거 + URI 쿼리 제거)
         String normalized = m.lines()
@@ -133,7 +132,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         String hashNorm = sha256Hex(normalized.getBytes(StandardCharsets.UTF_8));
 
         // 4) DTO 생성
-        return new RecordMediaToRedisDTO(
+        return new CheckValidDTO(
                 Instant.now(),     // tsEpochMs
                 getDurationMs,
                 seq,
@@ -143,7 +142,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 hashNorm,
                 segFirstUri,
                 segLastUri,
-                tailUrisJson,
+                tailNames,
                 wrongExtinf
         );
     }

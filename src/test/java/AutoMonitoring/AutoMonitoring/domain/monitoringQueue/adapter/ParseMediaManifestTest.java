@@ -1,10 +1,10 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.ParseMediaManifestImpl;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.SnapshotStore;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ class ParseMediaManifestTest {
                 """;
 
         // when
-        RecordMediaToRedisDTO result = parseMediaManifest.parse(standardManifest, Duration.ZERO, "trace-1", "1080p");
+        CheckValidDTO result = parseMediaManifest.parse(standardManifest, Duration.ZERO, "trace-1", "1080p");
 
         // then
         assertThat(result.seq()).isEqualTo(10462006);
@@ -91,7 +91,7 @@ class ParseMediaManifestTest {
         when(snapshotStorePath.m3u8Base()).thenReturn(Path.of("1234"));
 
         // when
-        RecordMediaToRedisDTO result = parseMediaManifest.parse(manifestWithDiscontinuity, Duration.ZERO, "trace-2", "720p");
+        CheckValidDTO result = parseMediaManifest.parse(manifestWithDiscontinuity, Duration.ZERO, "trace-2", "720p");
 
         // then
         assertThat(result.disCount()).isEqualTo(2);
@@ -116,7 +116,7 @@ class ParseMediaManifestTest {
                 """;
 
         // when
-        RecordMediaToRedisDTO result = parseMediaManifest.parse(manifestWithWrongExtinf, Duration.ZERO, "trace-3", "480p");
+        CheckValidDTO result = parseMediaManifest.parse(manifestWithWrongExtinf, Duration.ZERO, "trace-3", "480p");
 
         // then
         assertThat(result.wrongExtinf()).isTrue();
@@ -137,7 +137,7 @@ class ParseMediaManifestTest {
                 """;
 
         // when
-        RecordMediaToRedisDTO result = parseMediaManifest.parse(manifestWithQuery, Duration.ZERO, "trace-4", "1080p");
+        CheckValidDTO result = parseMediaManifest.parse(manifestWithQuery, Duration.ZERO, "trace-4", "1080p");
 
         // then
         assertThat(result.segFirstUri()).isEqualTo("https://test.com/segment1.ts");

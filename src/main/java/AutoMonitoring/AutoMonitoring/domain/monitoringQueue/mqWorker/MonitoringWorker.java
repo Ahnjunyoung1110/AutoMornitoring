@@ -13,6 +13,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.rabbitmq.ConsumeOptions;
@@ -28,6 +29,7 @@ public class MonitoringWorker {
     private final RedisService redisService;
     private final MonitoringService monitoringService;
 
+    private final RabbitTemplate rabbitTemplate;
     private final Receiver receiver;
     private final Sender sender;
 
@@ -83,6 +85,7 @@ public class MonitoringWorker {
 
                 }, concurrency)
                 .subscribe();
+
     }
 
 

@@ -1,17 +1,17 @@
 package AutoMonitoring.AutoMonitoring.util.redis.application;
 
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,22 +21,31 @@ public class RedisMediaServiceImpl implements RedisMediaService {
     private final ObjectMapper om;
 
     @Override
-    public void saveState(String traceId, String resolution, RecordMediaToRedisDTO dto) {
-        Map<String, String> m = toHash(dto);
+    public void saveState(String traceId, String resolution, CheckValidDTO dto) {
+        String m = null;
+        try {
+            m = om.writeValueAsString(dto);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         String key = RedisKeys.hashState(traceId,resolution);
-        redis.opsForHash().putAll(key,m);
+        redis.opsForValue().set(key, m, Duration.ofMinutes(3));
     }
 
     @Override
-    public RecordMediaToRedisDTO getState(String traceId, String resolution) {
+    public CheckValidDTO getState(String traceId, String resolution) {
         String key = RedisKeys.hashState(traceId,resolution);
-        Map<Object, Object> h = redis.opsForHash().entries(key);
-        if (h == null || h.isEmpty()) return null;
-        return fromHash(h);
+        String getDTO = redis.opsForValue().get(key);
+        if(getDTO == null) return null;
+        try {
+            return om.readValue(getDTO, CheckValidDTO.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
-    public void pushHistory(String traceId, String resolution, RecordMediaToRedisDTO dto, int max) {
+    public void pushHistory(String traceId, String resolution, CheckValidDTO dto, int max) {
         try {
             max = 10;
             String json = om.writeValueAsString(dto);
@@ -48,58 +57,20 @@ public class RedisMediaServiceImpl implements RedisMediaService {
         }
     }
 
+    @Override
+    public List<CheckValidDTO> getHistory(String traceId, String resolution) {
+        try {
+            String key = RedisKeys.hist(traceId, resolution);
+            List<String> jsons = redis.opsForList().range(key, 0, -1); // 0이 최신(LEFT push 했으므로)
+            if (jsons == null || jsons.isEmpty()) return List.of();
 
-
-
-    // 내부 기능
-    
-    // dto를 HashMap 으로 변환
-    private Map<String, String> toHash(RecordMediaToRedisDTO d) {
-        Map<String, String> m = new HashMap<>();
-        m.put("tsEpochMs", String.valueOf(d.tsEpochMs().toEpochMilli()));
-        m.put("seq", String.valueOf(d.seq()));
-        m.put("dseq", String.valueOf(d.dseq()));
-        m.put("disCount", String.valueOf(d.disCount()));
-        m.put("segmentCount", String.valueOf(d.segmentCount()));
-        m.put("hashNorm", nullToEmpty(d.hashNorm()));
-        m.put("segFirstUri", nullToEmpty(d.segFirstUri()));
-        m.put("segLastUri", nullToEmpty(d.segLastUri()));
-        m.put("tailUrisJson", nullToEmpty(d.tailUrisJson())); // 이미 JSON 문자열
-        m.put("wrongExtinf", String.valueOf(d.wrongExtinf()));
-        return m;
+            List<CheckValidDTO> out = new ArrayList<>(jsons.size());
+            for (String j : jsons) {
+                out.add(om.readValue(j, CheckValidDTO.class));
+            }
+            return out;
+        } catch (Exception e) {
+            throw new RuntimeException("getHistory failed", e);
+        }
     }
-
-
-
-    // Hashmap을 DTO 로 변환
-    private RecordMediaToRedisDTO fromHash(Map<Object, Object> h) {
-        Instant ts = Instant.ofEpochMilli(Long.parseLong(get(h, "tsEpochMs", "0")));
-        long durMs = Long.parseLong(get(h, "getDurationMs", "0"));
-        Duration getDurationMs = Duration.ofMillis(durMs);
-        long seq = Long.parseLong(get(h, "seq", "0"));
-        long dseq = Long.parseLong(get(h, "dseq", "0"));
-        int disCount = Integer.parseInt(get(h, "disCount", "0"));
-        int segmentCount = Integer.parseInt(get(h, "segmentCount", "0"));
-        String hashNorm = get(h, "hashNorm", "");
-        String segFirstUri = get(h, "segFirstUri", "");
-        String segLastUri = get(h, "segLastUri", "");
-        String tailUrisJson = get(h, "tailUrisJson", "[]");
-        boolean wrongExtinf = Boolean.parseBoolean(get(h, "wrongExtinf", "false"));
-
-        return new RecordMediaToRedisDTO(
-                ts,getDurationMs , seq, dseq, disCount, segmentCount,
-                hashNorm, segFirstUri, segLastUri, tailUrisJson, wrongExtinf
-        );
-    }
-
-    private static String get(Map<Object, Object> h, String k, String def) {
-        Object v = h.get(k);
-        return v == null ? def : v.toString();
-    }
-
-    private static String nullToEmpty(String s) { return s == null ? "" : s; }
-
-
-
-
 }

@@ -1,8 +1,8 @@
 package AutoMonitoring.AutoMonitoring.util.redis.application;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,16 +20,16 @@ class RedisMediaServiceImplIT extends BaseTest {
 
     String traceId;
     String resolution;
-    RecordMediaToRedisDTO dto;
+    CheckValidDTO dto;
 
     @BeforeEach
     void setUp() {
         traceId = "test-trace-id";
         resolution = "1920x1080";
-        dto = new RecordMediaToRedisDTO(
+        dto = new CheckValidDTO(
                 Instant.now(), Duration.ofMillis(2000),
                 12345L, 67890L, 10, 5,
-                "hash-norm-value", "first-uri", "last-uri", "[]", false
+                "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false
         );
     }
 
@@ -37,7 +38,7 @@ class RedisMediaServiceImplIT extends BaseTest {
     void save_and_get_roundtrip() {
         redisMediaService.saveState(traceId, resolution, dto);
 
-        RecordMediaToRedisDTO result = redisMediaService.getState(traceId, resolution);
+        CheckValidDTO result = redisMediaService.getState(traceId, resolution);
 
         assertThat(result).isNotNull();
         assertThat(result.seq()).isEqualTo(dto.seq());
@@ -50,7 +51,7 @@ class RedisMediaServiceImplIT extends BaseTest {
     @Test
     @DisplayName("상태가 없으면 null")
     void get_not_found_returns_null() {
-        RecordMediaToRedisDTO result = redisMediaService.getState("nope", "640x360");
+        CheckValidDTO result = redisMediaService.getState("nope", "640x360");
         assertThat(result).isNull();
     }
 }

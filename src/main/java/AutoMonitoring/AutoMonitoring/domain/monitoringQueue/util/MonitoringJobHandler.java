@@ -1,12 +1,12 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,11 +56,10 @@ public class MonitoringJobHandler {
                     return Mono.empty();
                 });
 
-        // subManifest 를 redis에 비동기적으로 저장하는 함수
-        Function<RecordMediaToRedisDTO, Mono<Void>> saveState =
+        // m3u8의 valid를 확인하기 위해서 rabbitMQ로 message를 보내고 이후의 메시지를 스케줄링 하는 함수
+        Function<CheckValidDTO, Mono<Void>> checkValid =
                 dto -> Mono.fromRunnable(() -> {
-                            redisMediaService.pushHistory(cmd.traceId(), cmd.resolution(), dto, 10);
-                            redisMediaService.saveState(cmd.traceId(), cmd.resolution(), dto);
+                            rabbit.convertAndSend(RabbitNames.RK_VALID, dto);
                             sendDelay(cmd);
                             log.info("처리 완료: {}ms", Duration.between(start, Instant.now()).toMillis());
                         })
@@ -74,18 +73,11 @@ public class MonitoringJobHandler {
                     Duration took = Duration.between(start, Instant.now());
                     return parseMediaManifest.parse(media, took, cmd.traceId(), cmd.resolution());
                 })
-                .flatMap(saveState)
+                .flatMap(checkValid)
                 // 에러시 기존 lock 해제
                 .onErrorResume(e -> release.then(Mono.error(e)))
-                // 성공시 기존 lock 해제
+                // 성공시 기존 lock 해제ㅇ
                 .then(release);
-    }
-
-
-    // redis에 매니페스트 이력과 현재 상태를 저장
-    void addToRedis(String traceId, String resolution, RecordMediaToRedisDTO recordMediaToRedisDTO) {
-        redisMediaService.pushHistory(traceId, resolution, recordMediaToRedisDTO, 10);
-        redisMediaService.saveState(traceId, resolution, recordMediaToRedisDTO);
     }
 
     // 다음 모니터링 작업을 위해 지연 메시지를 전송
