@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.util.redis.application;
 
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import com.fasterxml.jackson.core.JsonProcessingException;

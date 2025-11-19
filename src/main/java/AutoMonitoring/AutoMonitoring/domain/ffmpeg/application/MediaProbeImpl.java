@@ -1,10 +1,10 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.application;
 
+import AutoMonitoring.AutoMonitoring.contract.ffmpeg.FfmpegCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.StreamDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.VariantDTO;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
-import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
-import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
-import AutoMonitoring.AutoMonitoring.domain.program.dto.StreamDTO;
-import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class MediaProbeImpl implements MediaProbe {
     private String ffprobePath;
 
     @Override
-    public ProbeDTO probe(ProbeCommand probeCommand) {
+    public ProbeDTO probe(FfmpegCommand probeCommand) {
         try {
 
 
@@ -123,10 +123,11 @@ public class MediaProbeImpl implements MediaProbe {
                     probeCommand.traceId(),
                     Instant.now(),
                     probeCommand.masterUrl(),
-                    probeCommand.UserAgent(),
+                    probeCommand.userAgent(),
                     formatName,
                     durationSec,
                     overallBitrate,
+                    null,
                     streamDTOs,
                     variants
             );

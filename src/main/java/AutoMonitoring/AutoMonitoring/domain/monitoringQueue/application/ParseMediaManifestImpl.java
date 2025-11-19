@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
@@ -42,7 +42,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
         // 청크 파싱
         List<String> uris = new ArrayList<>();
-        int disCount = 0;
+        List<Integer> discontinuityPos = new ArrayList<>();
         boolean wrongExtinf = false;
 
         final double eps = 0.05; // 이정도의 오차는 DISCONTINUITY 가 없어도 혀용하겠어요!
@@ -68,8 +68,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
             // EXT-X-DISCONTINUITY 가 있는경우
             if(line.equals("#EXT-X-DISCONTINUITY")){
-                disCount++;
-                disUrl = Math.min(disUrl,i+2);
+                discontinuityPos.add(uris.size());
+                disUrl = Math.min(disUrl,i +2);
                 // 정상적인 EXTINF 라는 의미임으로 false
                 pendingExtinfOff = false;
                 continue;
@@ -92,19 +92,20 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         }
 
 
-        // discontinuity 가 등장했으면 m3u8을 일딴 저장. 추후 내부 광고이면 ttl을 하루 추후 valid 판정에서 외부 광고이면 20일을 유지한다.
-        if(disCount > 0){
-            try{
-                Path baseM3u8Url = snapshotStorePath.m3u8Base();
-                String url = lines[disUrl].trim();
-                Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m);
-                log.info("%s .".formatted(savedPath));
-            } catch (IOException e){
-                throw new RuntimeException(
-                        "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);
+        // save 옵션에 m3u8의 저장을 처리한다.
+        try{
+            Path baseM3u8Url = snapshotStorePath.m3u8Base();
+            String url = "";
+            if(disUrl != 111){
+                url = lines[disUrl].trim();
             }
-
+            Path savedPath = snapshotStore.trySnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m, !discontinuityPos.isEmpty());
+            log.info("%s .".formatted(savedPath));
+        } catch (IOException e){
+            throw new RuntimeException(
+                    "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);
         }
+
 
 
         int segmentCount = uris.size();
@@ -137,7 +138,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 getDurationMs,
                 seq,
                 dseq,
-                disCount,
+                discontinuityPos,
                 segmentCount,
                 hashNorm,
                 segFirstUri,

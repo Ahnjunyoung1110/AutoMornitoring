@@ -1,4 +1,5 @@
-package AutoMonitoring.AutoMonitoring.domain.program.dto;
+package AutoMonitoring.AutoMonitoring.contract.program;
+
 
 public record VariantDTO(
         String resolution,  // "1920x1080" (선택)

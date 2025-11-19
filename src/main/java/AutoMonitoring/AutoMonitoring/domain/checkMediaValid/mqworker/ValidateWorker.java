@@ -2,7 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.mqworker;
 
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 
 import java.time.Duration;
 

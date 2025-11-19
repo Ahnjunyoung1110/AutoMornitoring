@@ -1,4 +1,4 @@
-package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto;
+package AutoMonitoring.AutoMonitoring.contract.checkMediaValid;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,7 +9,7 @@ public record CheckValidDTO(
         Duration requestDurationMs,
         long seq,           // media-sequence의 값
         long dseq,          // #discontinuity sequence의 값
-        int disCount,  // 해당 m3u8에 #EXT-X-discontinuity 가 얼마나 있는가
+        List<Integer> discontinuityPos,  // 해당 m3u8에 #EXT-X-discontinuity 가 몇번쨰 uri 앞에 있는가
         int segmentCount, // 몇개의 청크가 입력되어있는가
         String hashNorm,      // 설정이 바뀌지는 않았는지를 확인하기 위한 정규화 후 hash값
         String segFirstUri,    // 첫 세그먼트 URI (쿼리X)

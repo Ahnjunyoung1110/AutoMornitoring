@@ -3,7 +3,7 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.URLTestConfig;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.AfterEach;
@@ -41,7 +41,7 @@ class MonitoringWorkerTest extends BaseTest {
     void receiveMessage_Success() {
         // given: 성공 URL을 담은 Command
         registry.getListenerContainer("Monitoring_worker").start();
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.SUCCESS_MANIFEST_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.SUCCESS_MANIFEST_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         redisService.setValues(RedisKeys.state(TRACE_ID, RESOLUTION), "MONITORING");
 
         // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
@@ -63,7 +63,7 @@ class MonitoringWorkerTest extends BaseTest {
     void receiveMessage_FirstFailure() {
         // given: 잘못된 URL을 담은 Command
         registry.getListenerContainer("Monitoring_worker").start();
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.INVALID_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.INVALID_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
 
         // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
         rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);

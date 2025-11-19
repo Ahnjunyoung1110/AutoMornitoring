@@ -58,6 +58,8 @@ public class RabbitConfig {
     @Bean DirectExchange provisioningExchange() { return new DirectExchange(RabbitNames.EX_PROVISIONING); }
     @Bean DirectExchange monitoringExchange() { return new DirectExchange(RabbitNames.EX_MONITORING); }
     @Bean DirectExchange delayExchange() { return new DirectExchange(RabbitNames.EX_DELAY); }
+    @Bean DirectExchange monitoringCommandExchange(){ return new DirectExchange(RabbitNames.EX_MONITORING_COMMAND); }
+    @Bean DirectExchange programCommandExchange(){ return new DirectExchange(RabbitNames.EX_PROGRAM_COMMAND); }
     @Bean TopicExchange deadLetterExchange() { return new TopicExchange(RabbitNames.EX_DEAD_LETTER); }
 
 
@@ -66,11 +68,15 @@ public class RabbitConfig {
     @Bean Queue qStage2() { return new Queue(RabbitNames.Q_STAGE2, true); }
     @Bean Queue qStage3() { return new Queue(RabbitNames.Q_STAGE3, true); }
     @Bean Queue qValid() { return new Queue(RabbitNames.Q_VALID, true); }
+    @Bean Queue monitoringCommandQueue() { return new Queue(RabbitNames.Q_MONITORING_COMMAND, true); }
+    @Bean Queue programCommandQueue() { return new Queue(RabbitNames.Q_PROGRAM_COMMAND, true); }
 
     @Bean Binding bStage1() { return BindingBuilder.bind(qStage1()).to(provisioningExchange()).with(RabbitNames.RK_STAGE1); }
     @Bean Binding bStage2() { return BindingBuilder.bind(qStage2()).to(provisioningExchange()).with(RabbitNames.RK_STAGE2); }
     @Bean Binding bStage3() { return BindingBuilder.bind(qStage3()).to(provisioningExchange()).with(RabbitNames.RK_STAGE3); }
     @Bean Binding bValid() { return BindingBuilder.bind(qValid()).to(provisioningExchange()).with(RabbitNames.RK_VALID);}
+    @Bean Binding bMonitoringCommand() { return BindingBuilder.bind(monitoringCommandQueue()).to(monitoringCommandExchange()).with(RabbitNames.RK_MONITORING_COMMAND);}
+    @Bean Binding bProgramCommand() { return BindingBuilder.bind(programCommandQueue()).to(programCommandExchange()).with(RabbitNames.RK_PROGRAM_COMMAND);}
 
 
     // 3. Monitoring 토폴로지 (핵심 루프)

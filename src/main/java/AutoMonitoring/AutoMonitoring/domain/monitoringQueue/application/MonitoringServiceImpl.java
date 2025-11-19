@@ -1,9 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
@@ -32,9 +32,7 @@ public class MonitoringServiceImpl implements MonitoringService {
     public void startMornitoring(StartMonitoringDTO dto) {
 
         // queue 에 넣을 dto 생성
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId());
-
-        String key = RedisKeys.queueFlag(dto.traceId(), dto.resolution());
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId(), dto.epoch());
         Duration ttl = Duration.ofMinutes(3);
 
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
@@ -44,23 +42,15 @@ public class MonitoringServiceImpl implements MonitoringService {
             redis.setValues(stateKey, "WRONG_URL");
             throw new AmqpRejectAndDontRequeueException("Wrong sub Url");
         }
-        boolean first = redis.getOpsAbsent(key, "1", ttl);
 
+        rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
+        log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
 
-
-        if(first){
-            // queue에 입력
-            rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
-            log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
-        }
-        else{
-            log.info("이미 모니터링을 수행중입니다.");
-        }
     }
+
 
     // 추후 구현
     @Override
     public void stopMornitoring(StopMornitoringDTO stopMornitoringDTO) {
-
     }
 }

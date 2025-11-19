@@ -1,8 +1,8 @@
 package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.adapter;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.vo.ValidationResult;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.ValidationResult;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.AfterEach;
@@ -14,6 +14,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -110,7 +111,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://121.ts",
@@ -127,7 +128,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12347L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://123.ts",
@@ -151,7 +152,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://121.ts",
@@ -168,7 +169,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12348L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://124.ts",
@@ -204,7 +205,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://121.ts",
@@ -221,7 +222,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12346L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://121.ts",
@@ -244,7 +245,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://121.ts",
@@ -261,7 +262,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                new ArrayList<>(),
                 10,
                 "123",
                 "https://122.ts",
@@ -285,7 +286,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                1,
+                List.of(1,2),
                 10,
                 "123",
                 "https://121.ts",
@@ -302,7 +303,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                0,
+                List.of(1,2),
                 10,
                 "123",
                 "https://122.ts",
@@ -342,7 +343,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12345L,
                 3L,
-                1,
+                List.of(1,2),
                 10,
                 "123",
                 "https://121.ts",
@@ -359,7 +360,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(3),
                 12346L,
                 3L,
-                0,
+                List.of(1,2),
                 10,
                 "124",
                 "https://123.ts",
@@ -384,7 +385,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 Duration.ofMillis(2000),
                 seq,
                 123L,
-                0,
+                List.of(1,2),
                 10,
                 "",
                 "http://test.url/segment" + seq + ".ts",

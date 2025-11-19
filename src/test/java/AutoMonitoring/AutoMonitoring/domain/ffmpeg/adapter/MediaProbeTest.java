@@ -1,8 +1,8 @@
 package AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
-import AutoMonitoring.AutoMonitoring.domain.ffmpeg.dto.ProbeCommand;
-import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

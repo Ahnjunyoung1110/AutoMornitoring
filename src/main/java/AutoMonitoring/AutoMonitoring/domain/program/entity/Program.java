@@ -1,6 +1,8 @@
 package AutoMonitoring.AutoMonitoring.domain.program.entity;
 
-import AutoMonitoring.AutoMonitoring.domain.program.dto.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.SaveM3u8State;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,6 +44,10 @@ public class Program {
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String UserAgent;
 
+    @Column(name= "save_m3u8_state")
+    @Enumerated(EnumType.STRING)
+    private SaveM3u8State saveM3u8State;
+
     /** streams */
     @ElementCollection
     @CollectionTable(name = "probe_streams", joinColumns = @JoinColumn(name = "probe_id"))
@@ -55,6 +61,13 @@ public class Program {
     private List<VariantInfoEmb> variants = new ArrayList<>();
 
 
+    @PrePersist
+    public void prePersist() {
+        if (saveM3u8State == null){
+            saveM3u8State = SaveM3u8State.WITHOUT_ADSLATE;
+        }
+    }
+
 
     /* 도메인 함수 */
     public static Map<String,String> getResolutionToUrlDomain(Program program){
@@ -67,8 +80,24 @@ public class Program {
     }
 
 
-    /* ---------- 매핑 헬퍼 ---------- */
+    // 모니터링 옵션 적용하는 함수
+    public void applyOption(ProgramOptionCommand command){
+        if (command.saveM3u8State() != null) {
+            this.saveM3u8State = command.saveM3u8State();
+        }
+    }
 
+    // 업데이트 함수
+    public void update(Program program){
+        this.masterManifestUrl = program.getMasterManifestUrl();
+        this.format = program.getFormat();
+        this.durationSec = program.getDurationSec();
+        this.overallBitrate = program.getOverallBitrate();
+        this.UserAgent = program.getUserAgent();
+        this.streams = program.getStreams();
+        this.variants = program.getVariants();
+    }
+    /* ---------- 매핑 헬퍼 ---------- */
     public static Program fromDto(ProbeDTO dto) {
         var b = Program.builder()
                 .masterManifestUrl(dto.masterManifestUrl())
@@ -76,6 +105,7 @@ public class Program {
                 .format(dto.format())
                 .durationSec(dto.durationSec())
                 .UserAgent(dto.userAgent())
+                .saveM3u8State(dto.saveM3u8State())
                 .overallBitrate(dto.overallBitrate());
 
         List<StreamInfoEmb> sList = new ArrayList<>();

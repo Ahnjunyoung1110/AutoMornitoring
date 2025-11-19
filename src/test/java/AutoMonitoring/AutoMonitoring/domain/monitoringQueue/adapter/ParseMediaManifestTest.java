@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.ParseMediaManifestImpl;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.SnapshotStore;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
@@ -66,8 +66,10 @@ class ParseMediaManifestTest {
         assertThat(result.segFirstUri()).isEqualTo("https://test.com/segment1.ts");
         assertThat(result.segLastUri()).isEqualTo("https://test.com/segment3.ts");
         assertThat(result.segmentCount()).isEqualTo(3);
-        assertThat(result.disCount()).isZero();
+        assertThat(result.discontinuityPos()).isEmpty();
         assertThat(result.wrongExtinf()).isFalse();
+
+        System.out.println(result.tailUris());
     }
 
     @Test
@@ -94,7 +96,9 @@ class ParseMediaManifestTest {
         CheckValidDTO result = parseMediaManifest.parse(manifestWithDiscontinuity, Duration.ZERO, "trace-2", "720p");
 
         // then
-        assertThat(result.disCount()).isEqualTo(2);
+        assertThat(result.discontinuityPos().size()).isEqualTo(2);
+        assertThat(result.discontinuityPos().getFirst()).isEqualTo(1);
+        assertThat(result.discontinuityPos().getLast()).isEqualTo(2);
         assertThat(result.segmentCount()).isEqualTo(3);
         assertThat(result.wrongExtinf()).isFalse();
     }
@@ -120,7 +124,7 @@ class ParseMediaManifestTest {
 
         // then
         assertThat(result.wrongExtinf()).isTrue();
-        assertThat(result.disCount()).isZero();
+        assertThat(result.discontinuityPos()).isEmpty();
         assertThat(result.segmentCount()).isEqualTo(3);
     }
 

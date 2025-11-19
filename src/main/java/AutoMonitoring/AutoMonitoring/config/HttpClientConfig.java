@@ -2,6 +2,8 @@ package AutoMonitoring.AutoMonitoring.config;
 
 
 import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -33,8 +35,12 @@ public class HttpClientConfig {
     @Bean
     public WebClient webClient(WebClient.Builder builder){
         reactor.netty.http.client.HttpClient httpClient = reactor.netty.http.client.HttpClient.create()
-                .responseTimeout(Duration.ofSeconds(5))
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000);
+                .responseTimeout(Duration.ofSeconds(8))
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
+                .doOnConnected(conn -> conn
+                        .addHandlerLast(new ReadTimeoutHandler(12))   // 읽는 중 12s 무응답이면 타임아웃
+                        .addHandlerLast(new WriteTimeoutHandler(10))  // 쓰는 중 10s 무응답이면 타임아웃
+                );
 
         return builder.clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();

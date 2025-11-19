@@ -1,4 +1,4 @@
-package AutoMonitoring.AutoMonitoring.domain.program.dto;
+package AutoMonitoring.AutoMonitoring.contract.program;
 
 import lombok.Builder;
 

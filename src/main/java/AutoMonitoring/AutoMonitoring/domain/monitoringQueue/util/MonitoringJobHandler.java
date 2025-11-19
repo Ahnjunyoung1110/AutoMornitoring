@@ -1,11 +1,10 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
-import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ public class MonitoringJobHandler {
     private final GetMediaService getMediaService;     // WebClient
     private final ParseMediaManifest parseMediaManifest;
     private final RedisService redisService;           // 동기
-    private final RedisMediaService redisMediaService; // 동기
     private final RabbitTemplate rabbit;               // 동기 (sendDelay에서 사용)
 
     public Mono<Void> handle(CheckMediaManifestCmd cmd) {
@@ -35,11 +33,22 @@ public class MonitoringJobHandler {
         Instant start = Instant.now();
         log.info("시작은 했습니다.");
 
+        // 버전에 맞는 메시지인지 확인. 맞지 않다면 버린다.
+        String epochKey = RedisKeys.messageEpoch(cmd.traceId());
+        Long nowEpoch = redisService.getEpoch(epochKey);
+
+        // 이전 버전의 메시지인 경우 폐기
+        if (!nowEpoch.equals(cmd.epoch())){
+            log.info("Stale message. drop. traceId={}, epoch={}, now={}",
+                    cmd.traceId(), cmd.epoch(), nowEpoch);
+            return Mono.empty();
+        }
+
         // 작업을 시작하기 전 Redis에서 Lock 을 비동기적으로 획득하는 Mono
         Mono<Boolean> acquired = Mono.fromCallable(() -> redisService.getOpsAbsent(lockKey, "1", Duration.ofMinutes(3)))
                 .subscribeOn(Schedulers.boundedElastic());
 
-        // 작업을 끝낸 후 Redisd에서 Lock을 비동기적으로 해제하는 Mono
+        // 작업을 끝낸 후 Redis에서 Lock을 비동기적으로 해제하는 Mono
         Mono<Void> release = Mono.fromRunnable(() -> redisService.deleteValues(lockKey))
                 .subscribeOn(Schedulers.boundedElastic())
                 .onErrorResume(e -> {
@@ -53,7 +62,7 @@ public class MonitoringJobHandler {
         Mono<String> getMedia = getMediaService.getMediaNonBlocking(cmd.mediaUrl(), cmd.userAgent())
                 .onErrorResume(e -> {
                     log.warn("가져오기에 실패했습니다. {}", e.toString());
-                    return Mono.empty();
+                    return Mono.error(e);
                 });
 
         // m3u8의 valid를 확인하기 위해서 rabbitMQ로 message를 보내고 이후의 메시지를 스케줄링 하는 함수
@@ -94,15 +103,15 @@ public class MonitoringJobHandler {
 
         CheckMediaManifestCmd newCmd;
         // 지연 시간이 너무 길거나, 이미 시간이 지났으면 즉시 실행
-        if ((now.isAfter(nextDue)) || (delay <= 100L)) {
-            newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, now, cmd.traceId());
+        if ((now.isAfter(nextDue)) || (delay == 100L)) {
+            newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, now, cmd.traceId(), cmd.epoch());
             log.warn("스케줄이 지연되어 즉시 실행합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
             rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, newCmd);
             return;
         }
 
         log.info("{}ms 후 다음 작업을 스케줄링합니다.", delay);
-        newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId());
+        newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId(), cmd.epoch());
         String delayRoutingKey = getDelayRoutingKey(delay);
 
         // EX_DELAY Exchange로 메시지를 보내, TTL이 설정된 큐로 들어가게 함

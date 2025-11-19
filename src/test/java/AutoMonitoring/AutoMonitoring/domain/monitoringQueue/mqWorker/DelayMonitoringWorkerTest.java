@@ -2,7 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +60,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
     @DisplayName("재시도 성공 시, 상태를 MONITORING으로 변경하고 주 모니터링 큐로 메시지를 보낸다")
     void receiveMessage_RetrySuccess() throws IOException, InterruptedException {
         // given: 재시도할 메시지를 재시도 큐(Q_WORK_DLX)에 직접 전송
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         given(httpClient.send(any(), any(HttpResponse.BodyHandler.class))).willReturn(new MockHttpResponse(200));
 
         // when: Worker가 메시지를 소비하도록 메시지 전송
@@ -85,7 +85,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
     @DisplayName("최대 재시도 횟수 초과 시, 상태를 FAILED로 변경하고 메시지를 Dead Letter 큐로 보낸다")
     void receiveMessage_MaxRetriesExceeded() {
         // given: 재시도 횟수가 4번인 메시지 준비 (이번이 5번째 시도)
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         MessageProperties properties = new MessageProperties();
         List<Map<String, Object>> xDeath = new ArrayList<>();
         Map<String, Object> deathHeader = new HashMap<>();

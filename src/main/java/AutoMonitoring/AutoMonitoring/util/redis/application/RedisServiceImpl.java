@@ -96,6 +96,30 @@ public class RedisServiceImpl implements RedisService {
         }
     }
 
+    // 다음 epoch를 리턴해주는 함수
+    @Override
+    public long nextEpoch(String key) {
+        Long value = redisTemplate.opsForValue().increment(key);
+        return value != null ? value : 1L;
+    }
+
+    // epoch를 리턴하는 함수
+    @Override
+    public long getEpoch(String key) {
+        Object raw = redisTemplate.opsForValue().get(key);
+
+        if (raw == null) return 0L;
+
+        String value = raw.toString();   // value serializer가 String 기반이라면 안전
+
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            log.warn("Redis epoch value is invalid. key={}, value={}", key, value);
+            return 0L;
+        }
+    }
+
     @Override
     public void deleteValues(String key) {
         redisTemplate.delete(key);

@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.program.entity;
 
-import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.VariantDTO;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;

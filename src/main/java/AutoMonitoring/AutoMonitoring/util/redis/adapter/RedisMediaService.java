@@ -1,6 +1,7 @@
 package AutoMonitoring.AutoMonitoring.util.redis.adapter;
 
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 
 import java.util.List;
 

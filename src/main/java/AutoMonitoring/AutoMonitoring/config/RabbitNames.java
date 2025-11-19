@@ -20,6 +20,16 @@ public final class RabbitNames {
     public static final String Q_VALID          = "queue.valid";
     public static final String RK_VALID         = "route.valid";
 
+    // Program 도메인에 커맨드를 입력하는 큐
+    public static final String Q_PROGRAM_COMMAND  = "queue.program.command";
+    public static final String RK_PROGRAM_COMMAND = "route.program.command";
+    public static final String EX_PROGRAM_COMMAND = "ex.program.command";
+
+    // MonitoringWorker 도메인에 커맨드를 입력하는 큐
+    public static final String Q_MONITORING_COMMAND  = "queue.monitoring.command";
+    public static final String RK_MONITORING_COMMAND = "route.monitoring.command";
+    public static final String EX_MONITORING_COMMAND = "ex.monitoring.command";
+
     // Delay Queues & R-Keys (for monitoring loop)
     public static final String Q_DELAY_DEFAULT  = "ttl.delay.queue";
     public static final String Q_DELAY_1S       = "ttl.delay.queue.1s";

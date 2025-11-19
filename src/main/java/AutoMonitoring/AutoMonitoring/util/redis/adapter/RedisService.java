@@ -12,5 +12,12 @@ public interface RedisService {
     boolean getOpsAbsent(String key, String value,Duration ttl);
     boolean checkExistsValue(String value);
     boolean execute(String Script, String key, String ttl);
+
+    // 다음 epoch를 리턴해주는 함수
+    long nextEpoch(String key);
+
+    // epoch를 리턴하는 함수
+    long getEpoch(String key);
+
     void deleteValues(String key);
 }

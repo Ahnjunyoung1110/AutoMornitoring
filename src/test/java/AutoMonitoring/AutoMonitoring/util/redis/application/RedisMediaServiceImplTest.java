@@ -1,7 +1,7 @@
 package AutoMonitoring.AutoMonitoring.util.redis.application;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
-import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.dto.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,7 +28,7 @@ class RedisMediaServiceImplIT extends BaseTest {
         resolution = "1920x1080";
         dto = new CheckValidDTO(
                 Instant.now(), Duration.ofMillis(2000),
-                12345L, 67890L, 10, 5,
+                12345L, 67890L, List.of(1,2), 5,
                 "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false
         );
     }
