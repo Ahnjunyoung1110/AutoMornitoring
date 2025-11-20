@@ -101,7 +101,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
         rabbitTemplate.send(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK_DLX, message);
 
         // then: Dead Letter 큐(Q_DEAD)에서 메시지가 수신되어야 함
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 10000);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 15000);
         assertThat(received).isNotNull();
 
         // Redis 상태가 FAILED로 변경되었는지 확인

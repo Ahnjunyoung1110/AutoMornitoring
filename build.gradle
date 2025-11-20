@@ -41,6 +41,8 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	developmentOnly "org.springframework.boot:spring-boot-devtools"
 
+	implementation("com.slack.api:slack-api-client:1.46.0")
+
 	// Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 

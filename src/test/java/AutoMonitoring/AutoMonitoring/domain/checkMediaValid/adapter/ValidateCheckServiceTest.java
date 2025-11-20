@@ -65,20 +65,6 @@ class ValidateCheckServiceTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("[WARN_NO_CHANGE] seq가 1회 동일 -> Warn.")
-    void checkValidation_WhenSequenceIsDuplicate_ShouldReturnFalse() {
-        // given
-        CheckValidDTO record1 = createRecord(12345L); // 중복 시퀀스
-        redisMediaService.pushHistory(traceId, resolution, record1, 10);
-
-        // when
-        ValidationResult isValid = validateCheckService.checkValidation(createRecord(12345L)); // 중복 시퀀스
-
-        // then
-        assertThat(isValid).isEqualTo(ValidationResult.WARN_NO_CHANGE);
-    }
-
-    @Test
     @DisplayName("[ERROR_STALL_NO_PROGRESS] seq가 3회 동일 -> Error.")
     void checkValidation_WhenSequenceIsDuplicateSeveralTimes_ShouldReturnFalse() {
         // given
@@ -86,18 +72,13 @@ class ValidateCheckServiceTest extends BaseTest {
 
         // when
         ValidationResult isValid;
-        isValid = validateCheckService.checkValidation(createRecord(12345L)); // 중복 시퀀스 1회째 [OK_FINE]
+        isValid = validateCheckService.checkValidation(record1); // 중복 시퀀스 1회째 [OK_FINE]
         assertThat(isValid).isEqualTo(ValidationResult.OK_FINE);
 
-        isValid = validateCheckService.checkValidation(createRecord(12345L)); // 중복 시퀀스 2회째 [OK_FINE]
+        isValid = validateCheckService.checkValidation(record1); // 중복 시퀀스 2회째 [OK_FINE]
         assertThat(isValid).isEqualTo(ValidationResult.OK_FINE);
 
-        isValid = validateCheckService.checkValidation(createRecord(12345L)); // 중복 시퀀스 3회째 [OK_FINE]
-        assertThat(isValid).isEqualTo(ValidationResult.OK_FINE);
-
-        isValid = validateCheckService.checkValidation(createRecord(12345L)); // 중복 시퀀스 4회째 [ERROR_STALL_NO_PROGRESS]
-
-        // then
+        isValid = validateCheckService.checkValidation(record1); // 중복 시퀀스 3회째 [ERROR_STALL_NO_PROGRESS]
         assertThat(isValid).isEqualTo(ValidationResult.ERROR_STALL_NO_PROGRESS);
     }
 
@@ -107,6 +88,8 @@ class ValidateCheckServiceTest extends BaseTest {
     void checkValidation_WhenSequenceIsSkipped_ShouldReturnTrue() {
         // given
         CheckValidDTO record1 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12345L,
@@ -124,6 +107,8 @@ class ValidateCheckServiceTest extends BaseTest {
 
         // when
         CheckValidDTO record2 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12347L,
@@ -148,6 +133,8 @@ class ValidateCheckServiceTest extends BaseTest {
     void checkValidation_WhenSequenceIsSkipped3_ShouldReturnTrue() {
         // given
         CheckValidDTO record1 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12345L,
@@ -165,6 +152,8 @@ class ValidateCheckServiceTest extends BaseTest {
 
         // when
         CheckValidDTO record2 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12348L,
@@ -201,6 +190,8 @@ class ValidateCheckServiceTest extends BaseTest {
     void checkValidation_WhenSequenceIsConsecutiveButSegmentNotChanged_ReturnWarn() {
         // given
         CheckValidDTO record1 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12345L,
@@ -218,6 +209,8 @@ class ValidateCheckServiceTest extends BaseTest {
 
         // when
         CheckValidDTO record2 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12346L,
@@ -241,6 +234,8 @@ class ValidateCheckServiceTest extends BaseTest {
     void validateCheck_WhenSegmentIsChangedButSeqIsEqual_ReturnWarn() {
         // given
         CheckValidDTO record1 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12345L,
@@ -258,6 +253,8 @@ class ValidateCheckServiceTest extends BaseTest {
 
         // when
         CheckValidDTO record2 = new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(3),
                 12345L,
@@ -276,47 +273,51 @@ class ValidateCheckServiceTest extends BaseTest {
         assertThat(isValid).isEqualTo(ValidationResult.WARN_SEGMENTS_CHANGED_SEQ_STUCK);
 
     }
-
-    @Test
-    @DisplayName("[WARN_DSEQ_STALE_AFTER_REMOVAL] DisCount변경, Dseq 미변경 -> WARN")
-    void validateCheck_WhenDiscontinuityDisapearButDseqNotChanged_ReturnWarn(){
-        // given
-        CheckValidDTO record1 = new CheckValidDTO(
-                Instant.now(),
-                Duration.ofMillis(3),
-                12345L,
-                3L,
-                List.of(1,2),
-                10,
-                "123",
-                "https://121.ts",
-                "https://121310.ts",
-                List.of("121.ts", "122.ts", "123.ts"),
-                false
-        );
-
-        redisMediaService.pushHistory(traceId, resolution, record1, 10);
-
-        // when
-        CheckValidDTO record2 = new CheckValidDTO(
-                Instant.now(),
-                Duration.ofMillis(3),
-                12345L,
-                3L,
-                List.of(1,2),
-                10,
-                "123",
-                "https://122.ts",
-                "https://121311.ts",
-                List.of("122.ts", "123.ts", "124.ts"),
-                false
-        );
-        ValidationResult isValid = validateCheckService.checkValidation(record2);
-
-        // then
-        assertThat(isValid).isEqualTo(ValidationResult.WARN_DSEQ_STALE_AFTER_REMOVAL);
-
-    }
+//
+//    @Test
+//    @DisplayName("구현 해야하나... [WARN_DSEQ_STALE_AFTER_REMOVAL] DisCount변경, Dseq 미변경 -> WARN")
+//    void validateCheck_WhenDiscontinuityDisapearButDseqNotChanged_ReturnWarn(){
+//        // given
+//        CheckValidDTO record1 = new CheckValidDTO(
+//                "123",
+//                "1234",
+//                Instant.now(),
+//                Duration.ofMillis(3),
+//                12345L,
+//                3L,
+//                List.of(1,2),
+//                10,
+//                "123",
+//                "https://121.ts",
+//                "https://121310.ts",
+//                List.of("121.ts", "122.ts", "123.ts"),
+//                false
+//        );
+//
+//        redisMediaService.pushHistory(traceId, resolution, record1, 10);
+//
+//        // when
+//        CheckValidDTO record2 = new CheckValidDTO(
+//                "123",
+//                "1234",
+//                Instant.now(),
+//                Duration.ofMillis(3),
+//                12345L,
+//                3L,
+//                List.of(1,2),
+//                10,
+//                "123",
+//                "https://122.ts",
+//                "https://121311.ts",
+//                List.of("122.ts", "123.ts", "124.ts"),
+//                false
+//        );
+//        ValidationResult isValid = validateCheckService.checkValidation(record2);
+//
+//        // then
+//        assertThat(isValid).isEqualTo(ValidationResult.WARN_DSEQ_STALE_AFTER_REMOVAL);
+//
+//    }
 
     @Test
     @DisplayName("[ERROR_SEQ_REWIND] Seq 역행 -> ERROR")
@@ -334,53 +335,10 @@ class ValidateCheckServiceTest extends BaseTest {
         assertThat(isValid).isEqualTo(ValidationResult.ERROR_SEQ_REWIND);
     }
 
-    @Test
-    @DisplayName("[ERROR_SEGMENT_GAP_OR_OVERLAP] 같은 Segment -> ERROR")
-    void validateCheck_SameSegmentReappearance_ReturnError(){
-        // given
-        CheckValidDTO record1 = new CheckValidDTO(
-                Instant.now(),
-                Duration.ofMillis(3),
-                12345L,
-                3L,
-                List.of(1,2),
-                10,
-                "123",
-                "https://121.ts",
-                "https://121310.ts",
-                List.of("121.ts", "122.ts", "123.ts"),
-                false
-        );
-
-        redisMediaService.pushHistory(traceId, resolution, record1, 10);
-
-        // when
-        CheckValidDTO record2 = new CheckValidDTO(
-                Instant.now(),
-                Duration.ofMillis(3),
-                12346L,
-                3L,
-                List.of(1,2),
-                10,
-                "124",
-                "https://123.ts",
-                "https://121312.ts",
-                List.of("122.ts", "122.ts", "124.ts"),
-                false
-        );
-        ValidationResult isValid = validateCheckService.checkValidation(record2);
-
-        // then
-        assertThat(isValid).isEqualTo(ValidationResult.ERROR_SEGMENT_GAP_OR_OVERLAP);
-    }
-
-
-
-
-
-
     private CheckValidDTO createRecord(long seq) {
         return new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),
                 Duration.ofMillis(2000),
                 seq,

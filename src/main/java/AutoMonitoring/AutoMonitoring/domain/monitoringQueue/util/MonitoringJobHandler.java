@@ -65,10 +65,10 @@ public class MonitoringJobHandler {
                     return Mono.error(e);
                 });
 
-        // m3u8의 valid를 확인하기 위해서 rabbitMQ로 message를 보내고 이후의 메시지를 스케줄링 하는 함수
+        // m3u8의 valid를 확인하기 위해서 rabbitMQ로 checkMediaValid 도메인에 message를 보내고 이후의 메시지를 스케줄링 하는 함수
         Function<CheckValidDTO, Mono<Void>> checkValid =
                 dto -> Mono.fromRunnable(() -> {
-                            rabbit.convertAndSend(RabbitNames.RK_VALID, dto);
+                            rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_VALID, dto);
                             sendDelay(cmd);
                             log.info("처리 완료: {}ms", Duration.between(start, Instant.now()).toMillis());
                         })

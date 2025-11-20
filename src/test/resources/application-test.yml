@@ -1,3 +1,9 @@
 rabbit:
   listeners:
     auto-startup: false
+spring:
+  config:
+    import: optional:classpath:slack.properties
+
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL}

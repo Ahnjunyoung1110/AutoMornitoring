@@ -27,6 +27,8 @@ class RedisMediaServiceImplIT extends BaseTest {
         traceId = "test-trace-id";
         resolution = "1920x1080";
         dto = new CheckValidDTO(
+                "123",
+                "1234",
                 Instant.now(), Duration.ofMillis(2000),
                 12345L, 67890L, List.of(1,2), 5,
                 "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false

@@ -98,3 +98,5 @@ spring:
       host: localhost
       port: 6379
       password:
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL}

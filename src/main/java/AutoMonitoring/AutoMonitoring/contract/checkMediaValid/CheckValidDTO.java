@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 
 public record CheckValidDTO(
+        String traceId,
+        String resolution,
         Instant tsEpochMs,  // 수집시각
         Duration requestDurationMs,
         long seq,           // media-sequence의 값

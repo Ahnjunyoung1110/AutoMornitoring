@@ -134,6 +134,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
         // 4) DTO 생성
         return new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),     // tsEpochMs
                 getDurationMs,
                 seq,

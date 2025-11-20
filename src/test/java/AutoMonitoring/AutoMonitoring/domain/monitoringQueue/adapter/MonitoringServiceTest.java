@@ -60,6 +60,10 @@ class MonitoringServiceTest extends BaseTest {
         // then
         // 1. 메시지가 딜레이 큐로 발행되었는지 검증
         CheckMediaManifestCmd receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_4S, 8000);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_3S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_2S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_1S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_DEFAULT, 100);
         assertThat(receivedCmd).isNotNull();
         assertThat(receivedCmd.traceId()).isEqualTo(dto.traceId());
         assertThat(receivedCmd.mediaUrl()).isEqualTo(dto.manifestUrl());

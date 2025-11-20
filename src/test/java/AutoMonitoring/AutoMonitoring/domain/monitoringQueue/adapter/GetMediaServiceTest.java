@@ -59,7 +59,7 @@ class GetMediaServiceTest extends BaseTest {
         // @BeforeEach 또는 테스트 시작 직후
         webClient.get().uri("https://httpbin.org/status/204")
                 .retrieve().toBodilessEntity()
-                .block(Duration.ofSeconds(2));  // 한 번 예열
+                .block(Duration.ofSeconds(3));  // 한 번 예열
     }
 
     @Test
@@ -148,7 +148,7 @@ class GetMediaServiceTest extends BaseTest {
         // 4) 5초 내 응답 도착 대기 (응답 콜백에서 latch countDown)
         boolean completed = false;
         try {
-            completed = done.await(5, TimeUnit.SECONDS);
+            completed = done.await(6, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
