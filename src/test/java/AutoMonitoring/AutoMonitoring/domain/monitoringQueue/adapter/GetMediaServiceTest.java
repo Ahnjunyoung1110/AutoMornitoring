@@ -59,7 +59,7 @@ class GetMediaServiceTest extends BaseTest {
         // @BeforeEach 또는 테스트 시작 직후
         webClient.get().uri("https://httpbin.org/status/204")
                 .retrieve().toBodilessEntity()
-                .block(Duration.ofSeconds(3));  // 한 번 예열
+                .block(Duration.ofSeconds(6));  // 한 번 예열
     }
 
     @Test

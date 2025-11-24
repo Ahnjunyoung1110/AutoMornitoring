@@ -4,6 +4,8 @@ import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.URLTestConfig;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
@@ -82,9 +84,9 @@ class MonitoringServiceTest extends BaseTest {
         assertThatThrownBy(() -> monitoringService.startMornitoring(dto))
                 .isInstanceOf(RuntimeException.class);
 
-        // 2. Redis에 해상도별 상태가 'WRONG_URL'로 기록되었는지 검증
-        String resolutionStateKey = RedisKeys.state(dto.traceId(), dto.resolution());
-        assertThat(redisService.getValues(resolutionStateKey)).isEqualTo("WRONG_URL");
+        // 2. 큐에 메시지가 정상적으로 수신되는지 확인
+        ProgramStatusCommand statusCommand = (ProgramStatusCommand) rabbitTemplate.receiveAndConvert(RabbitNames.Q_PROGRAM_COMMAND);
+        assertThat(statusCommand.status()).isEqualTo(ResolutionStatus.WRONG_URL);
 
         // 3. 큐에 메시지가 없는지 검증
         assertThat(rabbitTemplate.receive(RabbitNames.Q_WORK)).isNull();

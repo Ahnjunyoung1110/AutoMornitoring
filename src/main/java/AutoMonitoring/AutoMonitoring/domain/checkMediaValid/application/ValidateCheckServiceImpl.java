@@ -1,11 +1,14 @@
 package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.application;
 
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.ValidationResult;
+import AutoMonitoring.AutoMonitoring.contract.program.LogValidationFailureCommand;
 import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.adapter.ValidateCheckService;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,25 +22,34 @@ import java.util.regex.Pattern;
 public class ValidateCheckServiceImpl implements ValidateCheckService {
 
     private final RedisMediaService redis;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public ValidationResult checkValidation(CheckValidDTO dto) {
         // redis에 있는 history 호출
         List<CheckValidDTO> dtos = redis.getHistory(dto.traceId(), dto.resolution());
 
-
-        ValidationResult r;
+        ValidationResult r = ValidationResult.OK_FINE;
 
         // 이전 기록이 있다면 실행
         try {
             if (!dtos.isEmpty()) {
                 r = checkChunkList(dtos, dto);
-                if (r != ValidationResult.OK_FINE) return r;
+                if (r != ValidationResult.OK_FINE) {
+                    // 유효성 검사 실패 시, 로그 저장을 위한 커맨드를 발행
+                    LogValidationFailureCommand command = new LogValidationFailureCommand(dto.traceId(), r.name(), dto);
+                    rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command);
+                    return r;
+                }
 
                 r = invalidSequenceChange(dtos, dto);
-                if (r != ValidationResult.OK_FINE) return r;
+                if (r != ValidationResult.OK_FINE) {
+                    // 유효성 검사 실패 시, 로그 저장을 위한 커맨드를 발행
+                    LogValidationFailureCommand command = new LogValidationFailureCommand(dto.traceId(), r.name(), dto);
+                    rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command);
+                    return r;
+                }
             }
-            r = ValidationResult.OK_FINE;
         } finally {
             redis.pushHistory(dto.traceId(), dto.resolution(), dto, 10);
         }
@@ -79,7 +91,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
         // -> 3회 이상 확인하여 에러 생성, seg가 변경되었다면 warn
         if(seqDifference == 0){
             // seg 변경 확인
-            if(!curr.segLastUri().equals(prev.segLastUri())){
+            if(!Objects.equals(curr.segLastUri(), prev.segLastUri())){
                 return ValidationResult.WARN_SEGMENTS_CHANGED_SEQ_STUCK;
             }
 
@@ -195,7 +207,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
         final Pattern NUM = Pattern.compile("(\\d+)(?:\\.[^.]+)?$");
         var m = NUM.matcher(s);
         if (!m.find()) return null;
-        try { return Long.parseLong(m.group(1)); }
+        try { return Long.parseLong(m.group(1)); } 
         catch (NumberFormatException e) { return null; }
     }
 }

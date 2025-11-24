@@ -1,9 +1,12 @@
 package AutoMonitoring.AutoMonitoring.domain.program.application;
 
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.DbGetStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
 import AutoMonitoring.AutoMonitoring.domain.program.adapter.ProgramService;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
+import AutoMonitoring.AutoMonitoring.domain.program.entity.VariantInfoEmb;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramAlreadyExistException;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramNotFoundException;
 import AutoMonitoring.AutoMonitoring.domain.program.repository.ProgramRepo;
@@ -12,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -76,5 +82,34 @@ public class ProgramServiceImpl implements ProgramService {
 //        if (findedProgram.isEmpty()) throw new ProgramNotFoundException("해당 id의 프로그램이 존재하지 않습니다.");
 //
 //        programRepo.delete(findedProgram.get());
+    }
+
+    @Transactional
+    @Override
+    public void setStatus(ProgramStatusCommand c) {
+        Program program = programRepo.findByTraceId(c.traceId())
+                .orElseThrow(() -> new ProgramNotFoundException("프로그램이 존재하지 않습니다."));
+
+        VariantInfoEmb variantInfoEmb = program.findVariantByResolution(c.resolution())
+                .orElseThrow(() -> new ProgramNotFoundException("해당 resolution의 프로그램이 존재하지 않습니다."));
+
+        variantInfoEmb.changeStatus(c.status());
+
+    }
+
+    @Override
+    public Map<String,String> getStatus(DbGetStatusCommand cmd){
+        List<VariantInfoEmb> variants = programRepo.findVarient(cmd.traceId()).orElseThrow(
+                () -> new ProgramNotFoundException("프로그램이 존재하지 않습니다.")
+        );
+
+        Map<String, String> statusMap = new HashMap<>();
+        for (VariantInfoEmb emb : variants){
+            statusMap.put(emb.getResolution(), emb.getStatus().name());
+        }
+
+
+        return statusMap;
+
     }
 }

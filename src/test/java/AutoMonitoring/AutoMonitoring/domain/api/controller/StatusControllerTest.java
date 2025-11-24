@@ -14,7 +14,8 @@ import java.util.Map;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(StatusController.class) // StatusController만 테스트
 @AutoConfigureMockMvc(addFilters = false)
@@ -30,21 +31,7 @@ class StatusControllerTest {
     private RedisService redisService;
 
     @Test
-    @DisplayName("GET /api/status/{traceId}: traceId의 메인 상태를 조회한다")
-    void getTraceIdStatus() throws Exception {
-        // given
-        String traceId = "test-trace-id";
-        String expectedStatus = "MONITORING";
-        given(statusService.getTraceIdStatus(traceId)).willReturn(expectedStatus);
-
-        // when & then
-        mockMvc.perform(get("/api/status/{traceId}", traceId))
-                .andExpect(status().isOk())
-                .andExpect(content().string(expectedStatus));
-    }
-
-    @Test
-    @DisplayName("GET /api/status/{traceId}/details: traceId의 모든 상세 상태를 조회한다")
+    @DisplayName("GET /api/status/{traceId}: traceId의 모든 상세 상태를 조회한다")
     void getAllStatuses() throws Exception {
         // given
         String traceId = "test-trace-id";
@@ -56,21 +43,9 @@ class StatusControllerTest {
         given(statusService.getAllStatusesForTraceId(traceId)).willReturn(expectedStatusMap);
 
         // when & then
-        mockMvc.perform(get("/api/status/{traceId}/details", traceId))
+        mockMvc.perform(get("/api/status/{traceId}", traceId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()").value(3))
                 .andExpect(jsonPath("$.['hls:test-trace-id:state:1080p']").value("RETRYING (2/5)"));
-    }
-
-    @Test
-    @DisplayName("GET /api/status/{traceId}: 존재하지 않는 traceId 조회 시 404를 반환한다")
-    void getTraceIdStatus_NotFound() throws Exception {
-        // given
-        String traceId = "not-found-id";
-        given(statusService.getTraceIdStatus(traceId)).willReturn("false");
-
-        // when & then
-        mockMvc.perform(get("/api/status/{traceId}", traceId))
-                .andExpect(status().isNotFound());
     }
 }

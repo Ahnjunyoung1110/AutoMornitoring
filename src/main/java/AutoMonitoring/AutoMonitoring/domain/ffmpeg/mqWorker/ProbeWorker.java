@@ -4,8 +4,8 @@ import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.ffmpeg.FfmpegCommand;
 import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
 import AutoMonitoring.AutoMonitoring.contract.ffmpeg.RefreshCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.DbCreateCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.DbRefreshCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.DbCreateProbeCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.DbRefreshProbeCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
 import AutoMonitoring.AutoMonitoring.domain.program.exception.ProgramNotFoundException;
@@ -39,7 +39,7 @@ public class ProbeWorker {
                 if(dto.isEmpty()) return;
 
                 log.info(String.valueOf(dto));
-                DbCreateCommand newCmd = new DbCreateCommand(cmd.traceId(), dto.get());
+                DbCreateProbeCommand newCmd = new DbCreateProbeCommand(cmd.traceId(), dto.get());
 
                 rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, newCmd);
             }
@@ -51,7 +51,7 @@ public class ProbeWorker {
                     if(dto.isEmpty()) return;
 
                     log.info(String.valueOf(dto));
-                    DbRefreshCommand newCmd = new DbRefreshCommand(cmd.traceId(), dto.get());
+                    DbRefreshProbeCommand newCmd = new DbRefreshProbeCommand(cmd.traceId(), dto.get());
 
                     rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, newCmd);
                 } catch (ProgramNotFoundException e) {

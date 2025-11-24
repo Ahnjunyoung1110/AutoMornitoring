@@ -74,9 +74,5 @@ class MonitoringWorkerTest extends BaseTest {
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_WORK_DLX, 20000);
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
-
-        // Redis 상태가 RETRYING (1/5)으로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("RETRYING (1/5)");
     }
 }

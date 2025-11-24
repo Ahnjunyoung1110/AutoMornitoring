@@ -2,12 +2,13 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -38,8 +39,9 @@ public class MonitoringServiceImpl implements MonitoringService {
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
         if(!isValidUrl){
             log.info("URL이 유효하지 않습니다." + dto.manifestUrl());
-            String stateKey = RedisKeys.state(dto.traceId(), dto.resolution());
-            redis.setValues(stateKey, "WRONG_URL");
+
+            ProgramStatusCommand statusCmd = new ProgramStatusCommand(dto.traceId(), dto.resolution(), ResolutionStatus.WRONG_URL);
+            rabit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, statusCmd);
             throw new AmqpRejectAndDontRequeueException("Wrong sub Url");
         }
 

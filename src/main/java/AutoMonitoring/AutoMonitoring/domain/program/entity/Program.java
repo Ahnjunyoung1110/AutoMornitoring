@@ -10,10 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Entity
 @Builder
@@ -77,6 +74,12 @@ public class Program {
            resolutionToUrlMap.put(variant.getResolution(), variant.getUri());
         }
         return resolutionToUrlMap;
+    }
+
+    public Optional<VariantInfoEmb> findVariantByResolution(String resolution) {
+        return variants.stream()
+                .filter(v -> resolution.equals(v.getResolution()))
+                .findFirst();
     }
 
 

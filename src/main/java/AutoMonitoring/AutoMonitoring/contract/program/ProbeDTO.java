@@ -1,9 +1,11 @@
 package AutoMonitoring.AutoMonitoring.contract.program;
 
+import lombok.Builder;
+
 import java.time.Instant;
 import java.util.List;
 
-
+@Builder
 public record ProbeDTO(
         String traceId,
         Instant probeAt,

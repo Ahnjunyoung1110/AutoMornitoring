@@ -3,6 +3,8 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +56,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
         while(rabbitTemplate.receive(RabbitNames.Q_RETRY_DELAY_1S) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_DEAD) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_WORK_DLX) != null);
+        while(rabbitTemplate.receive(RabbitNames.Q_PROGRAM_COMMAND) != null);
     }
 
     @Test
@@ -72,10 +75,6 @@ class DelayMonitoringWorkerTest extends BaseTest {
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_WORK, 2000);
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
-
-        // Redis 상태가 MONITORING으로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("MONITORING");
 
         // 완료 후 다시 가동
         registry.getListenerContainer("Retry_queue").stop();
@@ -104,9 +103,10 @@ class DelayMonitoringWorkerTest extends BaseTest {
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 15000);
         assertThat(received).isNotNull();
 
-        // Redis 상태가 FAILED로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("FAILED");
+        // 상태가 FAILED로 변경되도록 queue로 전달되었는지 확인
+        ProgramStatusCommand statusCommand = (ProgramStatusCommand) rabbitTemplate.receiveAndConvert(RabbitNames.Q_PROGRAM_COMMAND);
+        assertThat(statusCommand.status()).isEqualTo(ResolutionStatus.FAILED);
+
         registry.getListenerContainer("Retry_queue").stop();
     }
 

@@ -2,7 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.ffmpeg.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.contract.program.DbCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.DbProbeCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.contract.program.SaveM3u8State;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
@@ -58,8 +58,8 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
         // then: 검증
         // Q_STAGE2에서 메시지를 실제로 수신하여 내용 검증
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STAGE2, 2000);
-        assertThat(received).isInstanceOf(DbCommand.class);
-        assertThat(((DbCommand) received).traceId()).isEqualTo("test-trace-id");
+        assertThat(received).isInstanceOf(DbProbeCommand.class);
+        assertThat(((DbProbeCommand) received).traceId()).isEqualTo("test-trace-id");
     }
 
     @Test

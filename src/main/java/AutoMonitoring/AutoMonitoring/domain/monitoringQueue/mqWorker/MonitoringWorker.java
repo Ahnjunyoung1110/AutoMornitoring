@@ -2,6 +2,8 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util.MonitoringJobHandler;
@@ -46,14 +48,13 @@ public class MonitoringWorker {
         long epoch = redisService.nextEpoch(epochKey);
 
         for(String key: info.getResolutionToUrl().keySet()){
-            String redisKey = RedisKeys.state(info.getTraceId(), key);
-            redisService.setValues(redisKey, "MONITORING");
+            ProgramStatusCommand statusCmd = new ProgramStatusCommand(info.getTraceId(), key, ResolutionStatus.MONITORING);
 
+            rabbitTemplate.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, statusCmd);
             StartMonitoringDTO dto = new StartMonitoringDTO(info.getTraceId(), info.getResolutionToUrl().get(key) , key, info.getUserAgent(), epoch);
             monitoringService.startMornitoring(dto);
         }
         log.info("모니터링을 시작합니다. TraceId: {}, 대상 해상도: {}", info.getTraceId(), info.getResolutionToUrl().keySet());
-        redisService.setValues(info.getTraceId(), "MONITORING");
     }
 
 
@@ -80,9 +81,8 @@ public class MonitoringWorker {
                             .onErrorResume(e -> {
                                 log.error("모니터링 작업 실패. 재시도 큐로 보냅니다. TraceId: {}, Resolution: {}, Error: {}", finalCmd.traceId(), finalCmd.resolution(), e.getMessage());
 
-                                // 재시도 상태(1/5)를 Redis에 기록
-                                String redisKey = RedisKeys.state(finalCmd.traceId(), finalCmd.resolution());
-                                redisService.setValues(redisKey, "RETRYING (1/5)");
+                                // 재시도 상태를 DB에 기록
+                                rabbitTemplate.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.EX_PROGRAM_COMMAND, ResolutionStatus.RETRYING);
                                 delivery.nack(false);
                                 return Mono.empty(); // 스트림 유지
                             });
