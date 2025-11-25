@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.program.application;
 
-import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.SaveFailureDTO;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.ValidationLog;
 import AutoMonitoring.AutoMonitoring.domain.program.repository.ValidationLogRepo;
@@ -22,7 +22,7 @@ public class ValidationLogService {
     private final ValidationLogRepo validationLogRepo;
 
     @Transactional
-    public void saveValidationFailure(Program program, CheckValidDTO dto, String reason) {
+    public void saveValidationFailure(Program program, SaveFailureDTO dto) {
         // List<Integer> to String
         String discontinuityPosStr = Optional.ofNullable(dto.discontinuityPos())
                 .map(list -> list.stream().map(String::valueOf).collect(Collectors.joining(",")))
@@ -36,10 +36,17 @@ public class ValidationLogService {
         ValidationLog validationLog = ValidationLog.builder()
                 .program(program)
                 .validatedAt(Instant.now())
-                .reason(reason)
+
+                // --- 룰 정보 ---
+                .ruleCode(dto.ruleCode())
+                .detailReason(dto.detailReason())      // 사람이 읽기 위한 상세 설명
+
+                // --- 현재 스냅샷 (CheckValidDTO 기반) ---
                 .resolution(dto.resolution())
                 .tsEpochMs(dto.tsEpochMs())
-                .requestDurationMs(dto.requestDurationMs() != null ? dto.requestDurationMs().toMillis() : null)
+                .requestDurationMs(dto.requestDurationMs() != null
+                        ? dto.requestDurationMs()
+                        : null)
                 .seq(dto.seq())
                 .dseq(dto.dseq())
                 .discontinuityPos(discontinuityPosStr)
@@ -49,6 +56,13 @@ public class ValidationLogService {
                 .segLastUri(dto.segLastUri())
                 .tailUris(tailUrisStr)
                 .wrongExtinf(dto.wrongExtinf())
+
+                // --- 이전 윈도우 / 기대값 요약 ---
+                .prevSeq(dto.prevSeq())                               // 없으면 null
+                .prevLastSegmentSeq(dto.prevLastSegmentSeq())         // 없으면 null
+                .currFirstSegmentSeq(dto.currFirstSegmentSeq())       // 이번 윈도우 첫 ts 번호
+                .expectedFirstSegmentSeq(dto.expectedFirstSegmentSeq()) // 룰이 계산한 기대값, 없으면 null
+
                 .build();
 
         validationLogRepo.save(validationLog);

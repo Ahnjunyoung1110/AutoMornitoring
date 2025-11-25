@@ -7,7 +7,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.time.Instant;
 
 /**
- * M3U8 유효성 검사 실패 이력을 기록하는 엔티티
+ * M3U8 유효성 검사 로그 엔티티
  */
 @Entity
 @Getter
@@ -20,49 +20,68 @@ public class ValidationLog {
     @UuidGenerator
     private String id;
 
-    /**
-     * 어떤 Program의 유효성 검사 로그인지 나타내는 관계 필드
-     */
+    /** 어떤 Program의 유효성 검사인지 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "program_id", nullable = false)
     private Program program;
 
-    /**
-     * 유효성 검사를 수행한 시간
-     */
+    /** 유효성 검사 시각 */
     @Column(nullable = false)
     private Instant validatedAt;
 
     /**
-     * 유효성 검사 실패 사유
+     * 룰 코드
+     * 예: ERROR_MEDIA_SEQUENCE_SEGMENT_MISMATCH, WARN_SEQ_ROLLED_SEGMENTS_IDENTICAL
      */
-    private String reason;
+    @Column(length = 128, nullable = false)
+    private String ruleCode;
 
-    // --- Fields from CheckValidDTO ---
+    /**
+     * 사람이 읽기 위한 상세 reason (prev/current 비교, 기대값 등)
+     */
+    @Column(length = 2048)
+    private String detailReason;
+
+    // ---- Fields from CheckValidDTO ----
+
     @Column(length = 32)
     private String resolution;
-    private Instant tsEpochMs;  // 수집시각
-    private Long requestDurationMs; // Duration 대신 Long으로 저장 (ms)
-    private long seq;           // media-sequence의 값
-    private long dseq;          // #discontinuity sequence의 값
-    
-    @Column(length = 1024) // 콤마로 구분된 문자열로 저장 (List<Integer>)
-    private String discontinuityPos;  // 해당 m3u8에 #EXT-X-discontinuity 가 몇번쨰 uri 앞에 있는가
-    
-    private int segmentCount; // 몇개의 청크가 입력되어있는가
-    
-    @Column(length = 256) // Hash 값 저장
-    private String hashNorm;      // 설정이 바뀌지는 않았는지를 확인하기 위한 정규화 후 hash값
-    
-    @Column(length = 2048) // URI 값 저장
-    private String segFirstUri;    // 첫 세그먼트 URI (쿼리X)
-    
-    @Column(length = 2048) // URI 값 저장
-    private String segLastUri;       // 마지막 세그먼트 URI (쿼리X)
-    
-    @Column(length = 4096) // 콤마로 구분된 문자열로 저장 (List<String>)
-    private String tailUris; // ← ["seg123.ts","seg124.ts","seg125.ts"]의 마지막 3개
-    
-    private boolean wrongExtinf; // EXTINF 가 5가 아닌데 이후에 #EXT-X-DISCONTINUITY 가 등장하지 않은경우 true
 
+    private Instant tsEpochMs;            // 수집 시각
+    private Long requestDurationMs;       // 다운로드 소요 시간
+    private long seq;                     // media-sequence
+    private long dseq;                    // discontinuity-sequence
+
+    @Column(length = 1024)
+    private String discontinuityPos;      // "#EXT-X-DISCONTINUITY" 위치 목록
+
+    private int segmentCount;
+
+    @Column(length = 256)
+    private String hashNorm;              // 정규화 후 hash
+
+    @Column(length = 2048)
+    private String segFirstUri;
+
+    @Column(length = 2048)
+    private String segLastUri;
+
+    @Column(length = 4096)
+    private String tailUris;              // 마지막 3개 URI
+
+    private boolean wrongExtinf;
+
+    // ---- Added for comparison/diagnostics ----
+
+    /** 직전 media-sequence */
+    private Long prevSeq;
+
+    /** 직전 윈도우의 마지막 세그먼트 번호 */
+    private Long prevLastSegmentSeq;
+
+    /** 이번 윈도우의 첫 세그먼트 번호 */
+    private Long currFirstSegmentSeq;
+
+    /** 룰이 계산한 기대되는 첫 세그먼트 번호 */
+    private Long expectedFirstSegmentSeq;
 }

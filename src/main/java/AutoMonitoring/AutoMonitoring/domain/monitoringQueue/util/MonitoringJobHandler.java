@@ -3,8 +3,10 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshRequestCommand;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.GetMediaService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.exception.SessionExpiredException;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -59,8 +61,19 @@ public class MonitoringJobHandler {
 
 
         // Submanifest를 비동기적으로 받아오는 Mono
-        Mono<String> getMedia = getMediaService.getMediaNonBlocking(cmd.mediaUrl(), cmd.userAgent())
+        Mono<String> getMedia = getMediaService.getMediaNonBlocking(cmd.mediaUrl(), cmd.userAgent(), cmd.traceId())
                 .onErrorResume(e -> {
+
+                    // 세션 만료 시
+                    if(e instanceof SessionExpiredException se) {
+                        log.warn("세션 만료 발생: trateId={}",se.getTraceId());
+                        // 버전을 늘려서 다른 resolution 도 처리
+                        redisService.nextEpoch(epochKey);
+
+                        // masterurl을 기준으로 refresh 하도록 처리
+                        ProgramRefreshRequestCommand command = new ProgramRefreshRequestCommand(cmd.traceId());
+                        rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, command);
+                    }
                     log.warn("가져오기에 실패했습니다. {}", e.toString());
                     return Mono.error(e);
                 });
@@ -85,7 +98,7 @@ public class MonitoringJobHandler {
                 .flatMap(checkValid)
                 // 에러시 기존 lock 해제
                 .onErrorResume(e -> release.then(Mono.error(e)))
-                // 성공시 기존 lock 해제ㅇ
+                // 성공시 기존 lock 해제
                 .then(release);
     }
 

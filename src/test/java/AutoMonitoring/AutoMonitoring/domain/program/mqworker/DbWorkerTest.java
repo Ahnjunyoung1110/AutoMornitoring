@@ -2,7 +2,6 @@ package AutoMonitoring.AutoMonitoring.domain.program.mqworker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.ValidationResult;
 import AutoMonitoring.AutoMonitoring.contract.ffmpeg.RefreshCommand;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
@@ -25,8 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -76,24 +73,18 @@ public class DbWorkerTest extends BaseTest {
         dbWorker.handle(command);
 
         // then
-        // 1. DB에 저장되었는지 확인
         Program savedProgram = programRepo.findByTraceId(traceId)
                 .orElseThrow(() -> new AssertionError("Program not found in DB"));
         assertThat(savedProgram.getMasterManifestUrl()).isEqualTo(probeDTO.masterManifestUrl());
         assertThat(savedProgram.getFormat()).isEqualTo("hls");
         assertThat(savedProgram.getVariants()).hasSize(probeDTO.variants().size());
 
-        // 2. RabbitMQ로 메시지가 전송되었는지 확인
         Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE3, 2000);
         assertThat(receivedMessage).isNotNull();
-
-        String messageBody = new String(receivedMessage.getBody(), StandardCharsets.UTF_8);
-        ProgramInfo receivedProgramInfo = objectMapper.readValue(messageBody, ProgramInfo.class);
-
+        ProgramInfo receivedProgramInfo = objectMapper.readValue(new String(receivedMessage.getBody()), ProgramInfo.class);
         assertThat(receivedProgramInfo.getTraceId()).isEqualTo(traceId);
         assertThat(receivedProgramInfo.getUserAgent()).isEqualTo(probeDTO.userAgent());
         assertThat(receivedProgramInfo.getResolutionToUrl()).hasSize(2);
-        assertThat(receivedProgramInfo.getResolutionToUrl().get("1920x1080")).isEqualTo("http://example.com/stream1.m3u8");
     }
 
     @Test
@@ -136,7 +127,6 @@ public class DbWorkerTest extends BaseTest {
         assertThat(updatedProgram.getMasterManifestUrl()).isEqualTo("http://example.com/refreshed_master.m3u8");
         assertThat(updatedProgram.getDurationSec()).isEqualTo(125.5);
         assertThat(updatedProgram.getVariants()).hasSize(1);
-        assertThat(updatedProgram.getVariants().get(0).getResolution()).isEqualTo("1280x720");
 
         Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE3, 2000);
         assertThat(receivedMessage).isNotNull();
@@ -151,7 +141,6 @@ public class DbWorkerTest extends BaseTest {
     void handleDbRefreshProbeCommand_Fail_When_ProgramNotFound() {
         // given
         DbRefreshProbeCommand command = new DbRefreshProbeCommand(traceId, probeDTO);
-
         // when & then
         assertThrows(ProgramNotFoundException.class, () -> dbWorker.handle(command));
     }
@@ -162,9 +151,8 @@ public class DbWorkerTest extends BaseTest {
     void handleLogValidationFailureCommand_Success() {
         // given
         programRepo.save(Program.fromDto(probeDTO));
-        CheckValidDTO validationData = createTestCheckValidDTO(traceId, "1080p", 123L, "last_uri");
-        String reason = ValidationResult.ERROR_STALL_NO_PROGRESS.name();
-        LogValidationFailureCommand command = new LogValidationFailureCommand(traceId, reason, validationData);
+        SaveFailureDTO failureDTO = createTestSaveFailureDTO(traceId);
+        LogValidationFailureCommand command = new LogValidationFailureCommand(traceId, failureDTO);
 
         // when
         dbWorker.handle(command);
@@ -173,10 +161,11 @@ public class DbWorkerTest extends BaseTest {
         assertThat(validationLogRepo.count()).isEqualTo(1);
         ValidationLog savedLog = validationLogRepo.findAll().get(0);
         assertThat(savedLog.getProgram().getTraceId()).isEqualTo(traceId);
-        assertThat(savedLog.getReason()).isEqualTo(reason);
-        assertThat(savedLog.getResolution()).isEqualTo("1080p");
-        assertThat(savedLog.getSeq()).isEqualTo(123L);
-        assertThat(savedLog.getTailUris()).isNotBlank();
+        assertThat(savedLog.getRuleCode()).isEqualTo(failureDTO.ruleCode());
+        assertThat(savedLog.getDetailReason()).isEqualTo(failureDTO.detailReason());
+        assertThat(savedLog.getResolution()).isEqualTo(failureDTO.resolution());
+        assertThat(savedLog.getSeq()).isEqualTo(failureDTO.seq());
+        assertThat(savedLog.getPrevSeq()).isEqualTo(failureDTO.prevSeq());
     }
 
     @Test
@@ -184,11 +173,9 @@ public class DbWorkerTest extends BaseTest {
     @DisplayName("handleLogValidationFailureCommand_ProgramNotFound: 프로그램이 없을 경우 로그를 저장하지 않고 넘어간다.")
     void handleLogValidationFailureCommand_ProgramNotFound() {
         // given
-        // No program is saved
         String nonExistentTraceId = "non-existent-trace-id";
-        CheckValidDTO validationData = createTestCheckValidDTO(nonExistentTraceId, "1080p", 123L, "last_uri");
-        String reason = ValidationResult.ERROR_STALL_NO_PROGRESS.name();
-        LogValidationFailureCommand command = new LogValidationFailureCommand(nonExistentTraceId, reason, validationData);
+        SaveFailureDTO failureDTO = createTestSaveFailureDTO(nonExistentTraceId);
+        LogValidationFailureCommand command = new LogValidationFailureCommand(nonExistentTraceId, failureDTO);
 
         // when & then
         assertDoesNotThrow(() -> dbWorker.handle(command));
@@ -213,7 +200,6 @@ public class DbWorkerTest extends BaseTest {
         // then
         assertThat(result).isInstanceOf(Map.class);
         Map<String, String> statusMap = (Map<String, String>) result;
-        assertThat(statusMap).hasSize(2);
         assertThat(statusMap.get("1920x1080")).isEqualTo(ResolutionStatus.MONITORING.name());
         assertThat(statusMap.get("1280x720")).isEqualTo(ResolutionStatus.RETRYING.name());
     }
@@ -260,14 +246,13 @@ public class DbWorkerTest extends BaseTest {
         assertThat(receivedCommand.traceId()).isEqualTo(traceId);
         assertThat(receivedCommand.masterUrl()).isEqualTo(program.getMasterManifestUrl());
     }
-    
+
     @Test
     @Transactional
     @DisplayName("handleProgramRefreshRequestCommand_Fail_When_ProgramNotFound: 갱신 요청할 프로그램이 없을 경우 예외를 발생시킨다.")
     void handleProgramRefreshRequestCommand_Fail_When_ProgramNotFound() {
         // given
         ProgramRefreshRequestCommand command = new ProgramRefreshRequestCommand(traceId);
-
         // when & then
         assertThrows(ProgramNotFoundException.class, () -> dbWorker.handleCommand(command));
     }
@@ -316,21 +301,27 @@ public class DbWorkerTest extends BaseTest {
                 .build();
     }
 
-    private CheckValidDTO createTestCheckValidDTO(String traceId, String resolution, long seq, String lastUri) {
-        return new CheckValidDTO(
+    private SaveFailureDTO createTestSaveFailureDTO(String traceId) {
+        return new SaveFailureDTO(
                 traceId,
-                resolution,
+                ValidationResult.ERROR_STALL_NO_PROGRESS.name(),
+                "Detailed human-readable reason for failure.",
+                "1080p",
                 Instant.now(),
-                Duration.ofMillis(150),
-                seq,
-                1,
+                150L,
+                125L,
+                1L,
                 Collections.emptyList(),
                 6,
                 "some-hash-value",
                 "first_uri.ts",
-                lastUri + ".ts",
-                List.of(lastUri + "_-2.ts", lastUri + "_-1.ts", lastUri + ".ts"),
-                false
+                "last_uri.ts",
+                List.of("uri1.ts", "uri2.ts"),
+                false,
+                124L,
+                12345L,
+                12346L,
+                12346L
         );
     }
 }

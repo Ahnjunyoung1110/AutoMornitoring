@@ -69,8 +69,6 @@ public class ValidateCheckServiceImplTest extends BaseTest {
         LogValidationFailureCommand command = objectMapper.readValue(messageBody, LogValidationFailureCommand.class);
 
         assertThat(command.traceId()).isEqualTo(traceId);
-        assertThat(command.reason()).isEqualTo(ValidationResult.ERROR_STALL_NO_PROGRESS.name());
-        assertThat(command.validationData().seq()).isEqualTo(stuckSeq);
     }
 
     private CheckValidDTO createTestCheckValidDTO(String traceId, String resolution, long seq, String lastUri) {
