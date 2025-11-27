@@ -75,8 +75,9 @@ public class GetMediaServiceImpl implements GetMediaService {
 
     @Override
     public Mono<String> getMediaNonBlocking(String url, String userAgent, String traceId) {
+        URI normalizedUri = URI.create(url.trim()).normalize();
         return webClient.get()
-                .uri(url)
+                .uri(normalizedUri)
                 .header("Accept", "*/*")
                 .header("Accept-Encoding", "gzip, deflate")
                 .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")

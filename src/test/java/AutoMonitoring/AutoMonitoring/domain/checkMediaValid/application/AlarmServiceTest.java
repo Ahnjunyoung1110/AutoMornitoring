@@ -8,7 +8,7 @@ class AlarmServiceTest extends BaseTest {
     @Autowired
     private AlarmService alarmService;    @Test
     void publishAlarm() {
-        alarmService.PublishAlarm("ㄹㅇ이다;", "1080", "qwer");
+        alarmService.publishAlarm("ㄹㅇ이다;", "1080", "qwer");
 
     }
 }

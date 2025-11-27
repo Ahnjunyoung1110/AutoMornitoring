@@ -86,7 +86,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
     // 2. 미디어 시퀀스가 1이 아니게 변한 경우
     public ValidationResult invalidSequenceChange(List<CheckValidDTO> previousDTOs, CheckValidDTO curr) {
         // 바로 이전의 m3u8
-        CheckValidDTO prev = previousDTOs.getFirst();
+        CheckValidDTO prev = findPrevBySeq(previousDTOs, curr);
         long seqDifference = curr.seq() - prev.seq();
 
         // 정상의 경우
@@ -96,7 +96,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
         // -> 3회 이상 확인하여 에러 생성, seg가 변경되었다면 warn
         if (seqDifference == 0) {
             // seg 변경 확인
-            if (!Objects.equals(curr.segLastUri(), prev.segLastUri())) {
+            if (!Objects.equals(curr.segFirstUri(), prev.segFirstUri())) {
                 return ValidationResult.WARN_SEGMENTS_CHANGED_SEQ_STUCK;
             }
 
@@ -112,13 +112,13 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
                 }
             }
 
-            if (sameCount >= 3) {
+            if (sameCount >= 4) {
                 return ValidationResult.ERROR_STALL_NO_PROGRESS;
             }
         }
 
-        // 2.2 5 이상 늘어난 경우
-        if (seqDifference >= 5) {
+        // 2.2 7 이상 늘어난 경우
+        if (seqDifference >= 7) {
             return ValidationResult.WARN_SEQUENCE_CHANGE_TOO_FAR;
         }
 
@@ -147,7 +147,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
                     if (!curr.discontinuityPos().isEmpty() || !prev.discontinuityPos().isEmpty()) {
                         return ValidationResult.OK_FINE;
                     }
-                    return ValidationResult.ERROR_MEDIA_SEQUENCE_SEGMENT_MISMATCH;
+                    return ValidationResult.WARN_MEDIA_SEQUENCE_SEGMENT_MISMATCH;
                 }
             }
         }
@@ -182,6 +182,14 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
             if (!Objects.equals(a.get(i), b.get(i))) return false;
         }
         return true;
+    }
+
+    // 가장 최근 seq를 확인한다.
+    private CheckValidDTO findPrevBySeq(List<CheckValidDTO> history, CheckValidDTO curr) {
+        return history.stream()
+                .filter(h -> h.seq() < curr.seq()) // 나보다 과거인 것들만
+                .max((a, b) -> Long.compare(a.seq(), b.seq())) // seq 가장 큰 놈
+                .orElse(history.getFirst()); // 못 찾으면 기존 fallback
     }
 
     /**
@@ -272,7 +280,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
                         prevSeq, currSeq, diff
                 );
             }
-            case ERROR_MEDIA_SEQUENCE_SEGMENT_MISMATCH -> {
+            case WARN_MEDIA_SEQUENCE_SEGMENT_MISMATCH -> {
                 long seqDiff = (prevSeq != null) ? (currSeq - prevSeq) : 0L;
                 if (prevFirstSeq != null && currFirstSeq != null) {
                     expectedFirstSeq = prevFirstSeq + seqDiff;

@@ -4,5 +4,6 @@ public enum ResolutionStatus {
     MONITORING,
     RETRYING,
     FAILED,
-    WRONG_URL
+    WRONG_URL,
+    STOP
 }

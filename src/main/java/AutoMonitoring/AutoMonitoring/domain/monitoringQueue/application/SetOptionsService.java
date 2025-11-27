@@ -17,9 +17,11 @@ public class SetOptionsService {
     public void setOptions(SaveM3u8OptionCommand command){
         log.info("traceId{} 에 대한 저장 옵션 변경입니다. to {} ",command.traceId(), command.saveM3u8State());
 
-        String key =RedisKeys.argument_record_discontinuity(command.traceId());
+        String key = RedisKeys.argument_record_discontinuity(command.traceId());
 
         redisService.setValues(key, command.saveM3u8State().toString());
     }
+
+
 
 }

@@ -54,11 +54,11 @@ public class DelayMonitoringWorker {
         ProgramStatusCommand programStatusCommand;
         // 최대 재시도 횟수 확인 (0,1,2,3 -> 4번 재시도 후 이번이 5번째 시도)
         if( attempt >= 10){
-            log.warn("최대 재시도 횟수(5회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
+            log.warn("최대 재시도 횟수(10회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
             // 1. 최종 FAILED 상태 기록
             programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.FAILED);
             rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
-            throw new AmqpRejectAndDontRequeueException("10회 이상 재시도 실패");
+            throw new AmqpRejectAndDontRequeueException("10회 이상 재시도 실패 %s, %s".formatted(cmd.traceId(), cmd.resolution()));
         }
 
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());

@@ -1,6 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.api.service;
 
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshRequestCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
 import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
 import AutoMonitoring.AutoMonitoring.domain.api.mqWorker.ProbePublisher;
 import AutoMonitoring.AutoMonitoring.domain.api.mqWorker.ProgramPublisher;
@@ -38,6 +39,13 @@ public class RecordManifestImpl implements RecordManifest {
         ProgramRefreshRequestCommand command = new ProgramRefreshRequestCommand(traceId);
         programPublisher.publish(command);
 
+    }
+
+    // 모니터링을 멈춘다
+    @Override
+    public void stopMonitoring(String traceId) {
+        ProgramStopCommand command = new ProgramStopCommand(traceId);
+        programPublisher.publish(command);
     }
 
 }

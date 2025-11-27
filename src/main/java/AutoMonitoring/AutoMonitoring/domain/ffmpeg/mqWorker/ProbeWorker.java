@@ -27,7 +27,8 @@ public class ProbeWorker {
     private final RabbitTemplate rabbit;
     private final RedisService redisService;
 
-    @RabbitListener(queues = RabbitNames.Q_STAGE1)
+    @RabbitListener(queues = RabbitNames.Q_STAGE1,
+            concurrency = "3")
     public void handle(FfmpegCommand cmd){
         ProbeDTO responseDTO;
 

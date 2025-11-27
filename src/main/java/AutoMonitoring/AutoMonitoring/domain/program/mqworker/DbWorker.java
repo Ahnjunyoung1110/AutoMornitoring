@@ -107,6 +107,11 @@ public class DbWorker {
             case ProgramStatusCommand c -> {
                 programService.setStatus(c);
             }
+
+            // 모니터링 중지
+            case ProgramStopCommand c -> {
+                programService.stopMonitoring(c);
+            }
         }
     }
 

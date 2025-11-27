@@ -61,6 +61,8 @@ public class MediaProbeImpl implements MediaProbe {
                     "-show_format","-show_streams",
                     "-f","hls",                       // ★ HLS demuxer 강제
                     "-allowed_extensions","ALL",
+                    "-rw_timeout", "5000000",                 // 5초
+                    "-max_reload", "1",         // 플레이리스트를 1번만 리로드하고 포기
                     "-extension_picky", "0",
                     "-protocol_whitelist","file,http,https,tcp,tls,crypto", // ★ 내부 fetch 허용
                     "-i" , escapedUrl
@@ -180,15 +182,42 @@ public class MediaProbeImpl implements MediaProbe {
 
     // 실제 커맨드 런 함수
     private static String run(String... cmd) throws IOException, InterruptedException {
-        var p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
-        var out = new String(p.getInputStream().readAllBytes(), UTF_8);
-        var err = new String(p.getErrorStream().readAllBytes(), UTF_8);
+        Process p = new ProcessBuilder(cmd).start();
+
+        var outBuf = new java.io.ByteArrayOutputStream();
+        var errBuf = new java.io.ByteArrayOutputStream();
+
+        Thread tOut = new Thread(() -> {
+            try (var in = p.getInputStream()) {
+                in.transferTo(outBuf);
+            } catch (IOException ignored) {}
+        });
+        Thread tErr = new Thread(() -> {
+            try (var in = p.getErrorStream()) {
+                in.transferTo(errBuf);
+            } catch (IOException ignored) {}
+        });
+
+        tOut.start();
+        tErr.start();
+
         int code = p.waitFor();
+        tOut.join();
+        tErr.join();
+
+        String out = outBuf.toString(UTF_8);
+        String err = errBuf.toString(UTF_8);
+
         if (code != 0) {
-            throw new IllegalArgumentException("probe failed: exit="+code+"\ncmd="+String.join(" ",cmd)+"\nstderr:\n"+err);
+            throw new IllegalArgumentException(
+                    "probe failed: exit=" + code +
+                            "\ncmd=" + String.join(" ", cmd) +
+                            "\nstderr:\n" + err
+            );
         }
         return out;
     }
+
 
 
     /* ---------- 마스터 M3U8 파서 (#EXT-X-STREAM-INF) ---------- */

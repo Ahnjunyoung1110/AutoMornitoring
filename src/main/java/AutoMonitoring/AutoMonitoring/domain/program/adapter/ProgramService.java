@@ -4,6 +4,7 @@ import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionComm
 import AutoMonitoring.AutoMonitoring.contract.program.DbGetStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 
 import java.util.Map;
@@ -22,4 +23,6 @@ public interface ProgramService {
     void setStatus(ProgramStatusCommand c);
 
     Map<String,String> getStatus(DbGetStatusCommand cmd);
+
+    void stopMonitoring(ProgramStopCommand c);
 }

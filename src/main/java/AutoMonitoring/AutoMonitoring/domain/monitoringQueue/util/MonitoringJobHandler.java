@@ -18,6 +18,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Function;
 
 @Component
@@ -81,7 +82,10 @@ public class MonitoringJobHandler {
         // m3u8의 valid를 확인하기 위해서 rabbitMQ로 checkMediaValid 도메인에 message를 보내고 이후의 메시지를 스케줄링 하는 함수
         Function<CheckValidDTO, Mono<Void>> checkValid =
                 dto -> Mono.fromRunnable(() -> {
-                            rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_VALID, dto);
+                            int partition = calcPartition(dto.traceId(), dto.resolution());
+                            String routingKey = RabbitNames.routingValid(partition);
+
+                            rabbit.convertAndSend(RabbitNames.EX_VALID, routingKey, dto);
                             sendDelay(cmd);
                             log.info("처리 완료: {}ms", Duration.between(start, Instant.now()).toMillis());
                         })
@@ -143,5 +147,12 @@ public class MonitoringJobHandler {
             case 4, 5 -> RabbitNames.RK_DELAY_4S;
             default -> RabbitNames.RK_DELAY_DEFAULT;
         };
+    }
+
+
+    // valid 를 체크할 큐를 정하는 라우팅
+    private int calcPartition(String traceId, String resolution) {
+        int hash = Objects.hash(traceId, resolution);
+        return Math.floorMod(hash, RabbitNames.VALID_PARTITIONS);
     }
 }

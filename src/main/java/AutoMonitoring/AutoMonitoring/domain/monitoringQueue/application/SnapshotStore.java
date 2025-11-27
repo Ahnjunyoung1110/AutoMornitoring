@@ -49,7 +49,7 @@ public class SnapshotStore {
             return SaveM3u8State.valueOf(m3u8SaveOption);  // "NONE" -> SaveM3u8State.NONE
         } catch (IllegalArgumentException e) {
             // 이상한 값 들어온 경우 기본값 처리
-            return SaveM3u8State.NONE;
+            return SaveM3u8State.WITHOUT_ADSLATE;
         }
     }
 
@@ -64,7 +64,7 @@ public class SnapshotStore {
             }
             
             // 에드슬레이트 아닌경우만 저장
-            case  WITHOUT_ADSLATE-> {
+            case WITHOUT_ADSLATE-> {
                 if (isDiscontinuity &&
                         !url.startsWith("https://cdn") && !url.startsWith("http://cdn") && !url.startsWith("https://cc-")){
                     return true;

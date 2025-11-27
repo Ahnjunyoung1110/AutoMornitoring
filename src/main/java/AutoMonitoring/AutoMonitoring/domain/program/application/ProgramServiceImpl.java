@@ -1,9 +1,7 @@
 package AutoMonitoring.AutoMonitoring.domain.program.application;
 
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.DbGetStatusCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.*;
 import AutoMonitoring.AutoMonitoring.domain.program.adapter.ProgramService;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.VariantInfoEmb;
@@ -110,6 +108,22 @@ public class ProgramServiceImpl implements ProgramService {
 
 
         return statusMap;
+
+    }
+
+    @Override
+    public void stopMonitoring(ProgramStopCommand c) {
+        List<VariantInfoEmb> variants = programRepo.findVarient(c.traceId()).orElseThrow(
+                () -> new ProgramNotFoundException("프로그램이 존재하지 않습니다.")
+        );
+
+        // db 상의 상태 변경
+        for(VariantInfoEmb emb : variants){
+            emb.changeStatus(ResolutionStatus.STOP);
+        }
+
+        // MQ 에서 모니터링을 중지하도록 변경
+
 
     }
 }

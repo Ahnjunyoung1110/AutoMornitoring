@@ -62,7 +62,7 @@ public class MonitoringWorker {
     @PostConstruct
     public void startMonitoring(){
         int prefetch = 52;
-        int concurrency = 512;
+        int concurrency = 80;
         log.info("PostConstruct 가 실행되었습니다.");
 
         receiver.consumeManualAck(RabbitNames.Q_WORK, new ConsumeOptions().qos(prefetch))
@@ -71,7 +71,7 @@ public class MonitoringWorker {
                     CheckMediaManifestCmd cmd = null;
                     try {
                         cmd = objectMapper.readValue(delivery.getBody(), CheckMediaManifestCmd.class);
-                        System.out.printf(String.valueOf(cmd));
+                        log.info("{}", cmd);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

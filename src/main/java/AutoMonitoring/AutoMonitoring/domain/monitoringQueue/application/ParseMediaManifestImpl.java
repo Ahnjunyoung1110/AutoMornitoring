@@ -159,6 +159,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
     }
 
     private static String stripQuery(String uri) {
+        // 해당 url의 경우 param으로 세그먼트 번호를 넣기 떄문에 모두 입력
+        if(uri.startsWith("https://stream-us-east-1.getpublica.com")) return uri;
         int q = uri.indexOf('?');
         return q >= 0 ? uri.substring(0, q) : uri;
     }

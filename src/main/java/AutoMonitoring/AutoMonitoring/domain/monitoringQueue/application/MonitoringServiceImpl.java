@@ -2,13 +2,14 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.StopMonitoringMQCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
+import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -42,7 +43,7 @@ public class MonitoringServiceImpl implements MonitoringService {
 
             ProgramStatusCommand statusCmd = new ProgramStatusCommand(dto.traceId(), dto.resolution(), ResolutionStatus.WRONG_URL);
             rabit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, statusCmd);
-            throw new AmqpRejectAndDontRequeueException("Wrong sub Url");
+            throw new AmqpRejectAndDontRequeueException("Wrong sub Url %s".formatted(cmd.mediaUrl()));
         }
 
         rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
@@ -51,8 +52,10 @@ public class MonitoringServiceImpl implements MonitoringService {
     }
 
 
-    // 추후 구현
+    // 모니터링을 중지한다.
     @Override
-    public void stopMornitoring(StopMornitoringDTO stopMornitoringDTO) {
+    public void stopMornitoring(StopMonitoringMQCommand stopMonitoringMQCommand) {
+        String epochKey = RedisKeys.messageEpoch(stopMonitoringMQCommand.traceId());
+        long epoch = redis.nextEpoch(epochKey);
     }
 }

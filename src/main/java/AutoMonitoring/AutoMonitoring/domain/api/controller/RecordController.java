@@ -57,4 +57,12 @@ public class RecordController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/{traceId}/stop")
+    public ResponseEntity<Void> stopMonitoring(@PathVariable String traceId){
+
+
+
+        return ResponseEntity.ok().build();
+    }
+
 }
