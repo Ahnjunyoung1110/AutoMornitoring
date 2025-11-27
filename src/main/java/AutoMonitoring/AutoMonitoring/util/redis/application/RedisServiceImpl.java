@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -22,6 +23,8 @@ public class RedisServiceImpl implements RedisService {
 
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+
 
     @Override
     public void setValues(String key, String data) {
@@ -123,5 +126,33 @@ public class RedisServiceImpl implements RedisService {
     @Override
     public void deleteValues(String key) {
         redisTemplate.delete(key);
+    }
+
+    // --- Reactive Methods ---
+
+    @Override
+    public Mono<Boolean> getOpsAbsentReactive(String key, String value, Duration ttl) {
+        return reactiveRedisTemplate.opsForValue().setIfAbsent(key, value, ttl);
+    }
+
+    @Override
+    public Mono<Void> deleteValuesReactive(String key) {
+        return reactiveRedisTemplate.delete(key).then();
+    }
+
+    @Override
+    public Mono<Long> nextEpochReactive(String key) {
+        return reactiveRedisTemplate.opsForValue().increment(key);
+    }
+
+    @Override
+    public Mono<Long> getEpochReactive(String key) {
+        return reactiveRedisTemplate.opsForValue().get(key)
+                .map(Long::parseLong)
+                .defaultIfEmpty(0L)
+                .onErrorResume(NumberFormatException.class, e -> {
+                    log.warn("Redis epoch value is invalid. key={}, value is not a number", key);
+                    return Mono.just(0L);
+                });
     }
 }

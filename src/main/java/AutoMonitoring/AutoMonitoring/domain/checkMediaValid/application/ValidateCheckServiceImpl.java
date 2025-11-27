@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,40 +28,41 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
     private final RabbitTemplate rabbitTemplate;
 
     @Override
-    public ValidationResult checkValidation(CheckValidDTO dto) {
-        // redis에 있는 history 호출 (가장 최근 순으로 들어있다고 가정)
-        List<CheckValidDTO> dtos = redis.getHistory(dto.traceId(), dto.resolution());
+    public Mono<ValidationResult> checkValidation(CheckValidDTO dto) {
+        // redis.getHistory is now reactive
+        return redis.getHistory(dto.traceId(), dto.resolution())
+                .flatMap(dtos -> {
+                    if (dtos.isEmpty()) {
+                        return Mono.just(ValidationResult.OK_FINE);
+                    }
 
-        ValidationResult r = ValidationResult.OK_FINE;
+                    // 1) Run checks
+                    ValidationResult result = checkChunkList(dtos, dto);
+                    if (result == ValidationResult.OK_FINE) {
+                        result = invalidSequenceChange(dtos, dto);
+                    }
 
-        try {
-            if (!dtos.isEmpty()) {
-                // 1) 청크 리스트 동일 + seq 롤링 여부
-                r = checkChunkList(dtos, dto);
-                if (r != ValidationResult.OK_FINE) {
-                    SaveFailureDTO failure = buildFailureDTO(r, dtos, dto);
-                    LogValidationFailureCommand command =
-                            new LogValidationFailureCommand(dto.traceId(), failure);
-                    rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command);
-                    return r;
-                }
+                    // 2) If a validation failed, send a message
+                    if (result != ValidationResult.OK_FINE) {
+                        SaveFailureDTO failure = buildFailureDTO(result, dtos, dto);
+                        LogValidationFailureCommand command = new LogValidationFailureCommand(dto.traceId(), failure);
 
-                // 2) media-sequence 변화 이상 여부
-                r = invalidSequenceChange(dtos, dto);
-                if (r != ValidationResult.OK_FINE) {
-                    SaveFailureDTO failure = buildFailureDTO(r, dtos, dto);
-                    LogValidationFailureCommand command =
-                            new LogValidationFailureCommand(dto.traceId(), failure);
-                    rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command);
-                    return r;
-                }
-            }
-        } finally {
-            // 항상 히스토리 업데이트
-            redis.pushHistory(dto.traceId(), dto.resolution(), dto, 10);
-        }
+                        // Wrap the blocking send call
+                        return Mono.fromRunnable(() ->
+                                        rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command)
+                                )
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .thenReturn(result); // Return the result after sending
+                    }
 
-        return r;
+                    return Mono.just(result);
+                })
+                .defaultIfEmpty(ValidationResult.OK_FINE) // If history was empty, default to OK
+                .doFinally(signalType -> {
+                    // Always update history, regardless of outcome
+                    redis.pushHistory(dto.traceId(), dto.resolution(), dto, 10)
+                            .subscribe(); // Fire-and-forget
+                });
     }
 
     // 1. 미디어 시퀀스는 변했으나 chunk의 목록이 바뀌지 않은 경우

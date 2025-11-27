@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +30,7 @@ public class ValidateCheckServiceImplTest extends BaseTest {
     private ValidateCheckServiceImpl validateCheckService;
 
     @Autowired
-    private RedisMediaService redisMediaService;
+    private RedisMediaService redisMediaService; // This is now the reactive interface
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -46,29 +47,36 @@ public class ValidateCheckServiceImplTest extends BaseTest {
         long stuckSeq = 100L;
 
         // 'ERROR_STALL_NO_PROGRESS' 오류를 유발하기 위한 조건 설정
-        // 동일한 seq를 가진 이전 기록을 2개 이상 쌓는다 (현재 DTO 포함 3개가 됨)
+        // 동일한 seq를 가진 이전 기록을 3개 이상 쌓는다 (현재 DTO 포함 4개가 됨)
         CheckValidDTO prevDto = createTestCheckValidDTO(traceId, resolution, stuckSeq, "prev_last_uri");
-        redisMediaService.pushHistory(traceId, resolution, prevDto, 10);
-        redisMediaService.pushHistory(traceId, resolution, prevDto, 10);
+
+        // Setup is now reactive, block until it's done
+        redisMediaService.pushHistory(traceId, resolution, prevDto, 10).block();
+        redisMediaService.pushHistory(traceId, resolution, prevDto, 10).block();
+        redisMediaService.pushHistory(traceId, resolution, prevDto, 10).block();
 
         CheckValidDTO currDto = createTestCheckValidDTO(traceId, resolution, stuckSeq, "prev_last_uri");
 
-        // when
-        ValidationResult result = validateCheckService.checkValidation(currDto);
+        // when & then
+        StepVerifier.create(validateCheckService.checkValidation(currDto))
+                .assertNext(result -> {
+                    // 1. 예상된 실패 결과가 반환되었는지 확인
+                    assertThat(result).isEqualTo(ValidationResult.ERROR_STALL_NO_PROGRESS);
 
-        // then
-        // 1. 예상된 실패 결과가 반환되었는지 확인
-        assertThat(result).isEqualTo(ValidationResult.ERROR_STALL_NO_PROGRESS);
+                    // 2. RabbitMQ 큐에 메시지가 발행되었는지 확인
+                    Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE2, 2000);
+                    assertThat(receivedMessage).isNotNull();
 
-        // 2. RabbitMQ 큐에 메시지가 발행되었는지 확인
-        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE2, 2000);
-        assertThat(receivedMessage).isNotNull();
-
-        // 3. 메시지 내용을 검증
-        String messageBody = new String(receivedMessage.getBody(), StandardCharsets.UTF_8);
-        LogValidationFailureCommand command = objectMapper.readValue(messageBody, LogValidationFailureCommand.class);
-
-        assertThat(command.traceId()).isEqualTo(traceId);
+                    // 3. 메시지 내용을 검증
+                    try {
+                        String messageBody = new String(receivedMessage.getBody(), StandardCharsets.UTF_8);
+                        LogValidationFailureCommand command = objectMapper.readValue(messageBody, LogValidationFailureCommand.class);
+                        assertThat(command.traceId()).isEqualTo(traceId);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .verifyComplete();
     }
 
     private CheckValidDTO createTestCheckValidDTO(String traceId, String resolution, long seq, String lastUri) {

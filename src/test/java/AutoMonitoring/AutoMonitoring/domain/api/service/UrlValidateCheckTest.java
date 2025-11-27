@@ -1,6 +1,5 @@
 package AutoMonitoring.AutoMonitoring.domain.api.service;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,19 +33,15 @@ class UrlValidateCheckTest {
     @InjectMocks
     private UrlValidateCheck urlValidateCheck;
 
-    @BeforeEach
-    void setUp() throws IOException, InterruptedException {
-        // 기본적으로 성공 응답을 모의 설정
-        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-                .thenReturn(mockHttpResponse);
-        when(mockHttpResponse.statusCode()).thenReturn(200);
-    }
-
     @Test
     @DisplayName("상대 경로가 포함된 URL이 올바르게 정규화되고 유효성 검사가 성공해야 한다")
     void check_shouldNormalizeRelativePathsAndReturnTrueForValidUrl() throws IOException, InterruptedException {
         // Given
         // 복잡한 상대 경로를 포함하는 URL. 정규화되면 간단한 경로가 되어야 함.
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockHttpResponse);
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+
         String problematicUrl = "http://example.com/a/b/../../c/./d/file.m3u8";
         // 예상되는 정규화된 URI
         URI expectedNormalizedUri = URI.create("http://example.com/c/d/file.m3u8");
@@ -86,7 +81,6 @@ class UrlValidateCheckTest {
     void check_shouldReturnFalseForErrorStatusCode() {
         // Given
         String url = "http://example.com/nonexistent-file.m3u8";
-        when(mockHttpResponse.statusCode()).thenReturn(404); // 404 Not Found
 
         // When
         boolean isValid = urlValidateCheck.check(url);
