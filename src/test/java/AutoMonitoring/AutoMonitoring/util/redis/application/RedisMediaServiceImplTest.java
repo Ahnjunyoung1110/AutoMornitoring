@@ -1,43 +1,49 @@
 package AutoMonitoring.AutoMonitoring.util.redis.application;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisMediaService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import reactor.test.StepVerifier;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class RedisMediaServiceImplIT extends BaseTest {
+class RedisMediaServiceImplTest extends BaseTest {
 
     @Autowired RedisMediaService redisMediaService;
 
     String traceId;
     String resolution;
-    RecordMediaToRedisDTO dto;
+    CheckValidDTO dto;
 
     @BeforeEach
     void setUp() {
         traceId = "test-trace-id";
         resolution = "1920x1080";
-        dto = new RecordMediaToRedisDTO(
+        dto = new CheckValidDTO(
+                "123",
+                "1234",
                 Instant.now(), Duration.ofMillis(2000),
-                12345L, 67890L, 10, 5,
-                "hash-norm-value", "first-uri", "last-uri", "[]", false
+                12345L, 67890L, List.of(1,2), 5,
+                "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false
         );
     }
 
     @Test
     @DisplayName("saveState 후 getState로 동일 DTO가 복원된다")
     void save_and_get_roundtrip() {
-        redisMediaService.saveState(traceId, resolution, dto);
+        // block() to ensure save is complete before get
+        redisMediaService.saveState(traceId, resolution, dto).block();
 
-        RecordMediaToRedisDTO result = redisMediaService.getState(traceId, resolution);
+        // block() to get the result for assertion
+        CheckValidDTO result = redisMediaService.getState(traceId, resolution).block();
 
         assertThat(result).isNotNull();
         assertThat(result.seq()).isEqualTo(dto.seq());
@@ -48,9 +54,9 @@ class RedisMediaServiceImplIT extends BaseTest {
     }
 
     @Test
-    @DisplayName("상태가 없으면 null")
-    void get_not_found_returns_null() {
-        RecordMediaToRedisDTO result = redisMediaService.getState("nope", "640x360");
-        assertThat(result).isNull();
+    @DisplayName("상태가 없으면 null 대신 empty Mono를 반환한다")
+    void get_not_found_returns_empty_mono() {
+        StepVerifier.create(redisMediaService.getState("nope", "640x360"))
+            .verifyComplete(); // Asserts that the Mono is empty
     }
 }

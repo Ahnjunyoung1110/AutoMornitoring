@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:classpath:slack.properties
+
   data:
     redis:
       host: localhost   # 컨테이너 포트 매핑했다면
@@ -22,3 +25,5 @@ spring:
     open-in-view: false
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL}

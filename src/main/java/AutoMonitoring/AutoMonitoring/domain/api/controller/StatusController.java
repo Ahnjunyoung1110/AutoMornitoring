@@ -18,20 +18,11 @@ public class StatusController {
     private final StatusService statusService;
 
     @GetMapping("/{traceId}")
-    public ResponseEntity<String> getTraceIdStatus(@PathVariable String traceId) {
-        String status = statusService.getTraceIdStatus(traceId);
-        if (status == null || status.equals("false")) {
+    public ResponseEntity<Map<String, String>> getTraceIdStatus(@PathVariable String traceId) {
+        Map<String,String> status = statusService.getAllStatusesForTraceId(traceId);
+        if (status.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(status);
-    }
-
-    @GetMapping("/{traceId}/details")
-    public ResponseEntity<Map<String, String>> getAllStatuses(@PathVariable String traceId) {
-        Map<String, String> statuses = statusService.getAllStatusesForTraceId(traceId);
-        if (statuses.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(statuses);
     }
 }

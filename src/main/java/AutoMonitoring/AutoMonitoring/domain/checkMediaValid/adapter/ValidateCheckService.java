@@ -1,5 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.adapter;
 
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.ValidationResult;
+import reactor.core.publisher.Mono;
+
 public interface ValidateCheckService {
-    Boolean checkValidation(String traceId, String resolution);
+    Mono<ValidationResult> checkValidation(CheckValidDTO dto);
 }

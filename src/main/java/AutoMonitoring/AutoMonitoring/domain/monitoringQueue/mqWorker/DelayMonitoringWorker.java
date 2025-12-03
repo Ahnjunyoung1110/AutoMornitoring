@@ -1,7 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -35,16 +37,28 @@ public class DelayMonitoringWorker {
     @RabbitListener(id = "Retry_queue",queues = RabbitNames.Q_WORK_DLX
     )
     void receiveMessage(Message m , CheckMediaManifestCmd cmd){
+        // 버전에 맞는 메시지인지 확인. 맞지 않다면 버린다.
+        String epochKey = RedisKeys.messageEpoch(cmd.traceId());
+        Long nowEpoch = redisService.getEpoch(epochKey);
+
+        // 이전 버전의 메시지인 경우 폐기
+        if (!nowEpoch.equals(cmd.epoch())){
+            log.info("Stale message. drop. traceId={}, epoch={}, now={}",
+                    cmd.traceId(), cmd.epoch(), nowEpoch);
+            return;
+        }
+
+
         // x-death 헤더에서 재시도 횟수를 계산 (0-indexed 이므로 0부터 시작)
         int attempt = deathCountForQueue(m, RabbitNames.Q_RETRY_DELAY_1S);
-        String redisKey = RedisKeys.state(cmd.traceId(), cmd.resolution());
-
+        ProgramStatusCommand programStatusCommand;
         // 최대 재시도 횟수 확인 (0,1,2,3 -> 4번 재시도 후 이번이 5번째 시도)
-        if( attempt >= 4){
-            log.warn("최대 재시도 횟수(5회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
+        if( attempt >= 10){
+            log.warn("최대 재시도 횟수(10회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
             // 1. 최종 FAILED 상태 기록
-            redisService.setValues(redisKey, "FAILED");
-            throw new AmqpRejectAndDontRequeueException("5회 이상 재시도 실패");
+            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.FAILED);
+            rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
+            throw new AmqpRejectAndDontRequeueException("10회 이상 재시도 실패 %s, %s".formatted(cmd.traceId(), cmd.resolution()));
         }
 
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
@@ -58,7 +72,7 @@ public class DelayMonitoringWorker {
 
         try{
             int currentAttempt = attempt + 2; // 사용자에게 보여줄 재시도 횟수 (2/5 부터 시작)
-            log.info("재시도 요청을 수행합니다. (시도: {}/5)", currentAttempt);
+            log.info("재시도 요청을 수행합니다. (시도: {}/5) url: {}", currentAttempt, cmd.mediaUrl());
 
             HttpRequest req = HttpRequest.newBuilder(URI.create(cmd.mediaUrl()))
                     .timeout(Duration.ofSeconds(4))
@@ -81,16 +95,13 @@ public class DelayMonitoringWorker {
 
             log.info("재시도 성공. 상태를 다시 MONITORING으로 변경하고 모니터링 큐로 보냅니다.");
             // 재시도 성공 시, 다시 MONITORING 상태로 변경
-            redisService.setValues(redisKey, "MONITORING");
+            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.MONITORING);
+            rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
             rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
         }
         catch (Exception e){
             int nextAttempt = attempt + 2;
             log.warn("재시도 실패 ({}). 1초 후 다시 시도합니다. Error: {}", nextAttempt, e.getMessage());
-
-            // 2. 다음 재시도 상태를 Redis에 기록
-            String nextState = String.format("RETRYING (%d/5)", nextAttempt);
-            redisService.setValues(redisKey, nextState);
 
             // 실패 시, EX_DELAY를 통해 재시도 딜레이 큐로 메시지를 보냄
             rabbit.convertAndSend(RabbitNames.EX_DELAY, RabbitNames.RK_RETRY_DELAY_1S, MessageBuilder

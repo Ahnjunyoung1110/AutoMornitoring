@@ -3,8 +3,10 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.URLTestConfig;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
@@ -50,7 +52,7 @@ class MonitoringServiceTest extends BaseTest {
     @DisplayName("유효한 URL로 모니터링 시작 시, Redis에 상태를 기록하고 지연 큐로 메시지를 보낸다.")
     void startMonitoring_WithValidUrl_ShouldRecordStateAndSendMessage() {
         // given
-        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", URLTestConfig.SUCCESS_MANIFEST_URL, "1080p", "TestAgent");
+        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", URLTestConfig.SUCCESS_MANIFEST_URL, "1080p", "TestAgent", 0L);
         when(urlValidateCheck.check(anyString())).thenReturn(true);
 
 
@@ -60,6 +62,10 @@ class MonitoringServiceTest extends BaseTest {
         // then
         // 1. 메시지가 딜레이 큐로 발행되었는지 검증
         CheckMediaManifestCmd receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_4S, 8000);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_3S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_2S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_1S, 100);
+        if (receivedCmd == null) receivedCmd = (CheckMediaManifestCmd) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_DEFAULT, 100);
         assertThat(receivedCmd).isNotNull();
         assertThat(receivedCmd.traceId()).isEqualTo(dto.traceId());
         assertThat(receivedCmd.mediaUrl()).isEqualTo(dto.manifestUrl());
@@ -70,7 +76,7 @@ class MonitoringServiceTest extends BaseTest {
     @DisplayName("유효하지 않은 URL로 모니터링 시작 시, Redis에 상태를 기록하고 예외를 발생시킨다.")
     void startMonitoring_WithInvalidUrl_ShouldRecordStateAndThrowException() {
         // given
-        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", "invalid-url", "1080p", "TestAgent");
+        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", "invalid-url", "1080p", "TestAgent", 0L);
         when(urlValidateCheck.check(anyString())).thenReturn(false);
 
         // when & then
@@ -78,9 +84,9 @@ class MonitoringServiceTest extends BaseTest {
         assertThatThrownBy(() -> monitoringService.startMornitoring(dto))
                 .isInstanceOf(RuntimeException.class);
 
-        // 2. Redis에 해상도별 상태가 'WRONG_URL'로 기록되었는지 검증
-        String resolutionStateKey = RedisKeys.state(dto.traceId(), dto.resolution());
-        assertThat(redisService.getValues(resolutionStateKey)).isEqualTo("WRONG_URL");
+        // 2. 큐에 메시지가 정상적으로 수신되는지 확인
+        ProgramStatusCommand statusCommand = (ProgramStatusCommand) rabbitTemplate.receiveAndConvert(RabbitNames.Q_PROGRAM_COMMAND);
+        assertThat(statusCommand.status()).isEqualTo(ResolutionStatus.WRONG_URL);
 
         // 3. 큐에 메시지가 없는지 검증
         assertThat(rabbitTemplate.receive(RabbitNames.Q_WORK)).isNull();

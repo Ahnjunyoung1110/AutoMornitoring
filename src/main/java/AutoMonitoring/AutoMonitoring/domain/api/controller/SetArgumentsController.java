@@ -1,11 +1,14 @@
 package AutoMonitoring.AutoMonitoring.domain.api.controller;
 
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
 import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
+import AutoMonitoring.AutoMonitoring.domain.api.service.ProgramService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -13,11 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/arguments")
 public class SetArgumentsController {
     private final RecordManifest recordManifest;
+    private final ProgramService programService;
 
-    @PostMapping("/record_discontinuity")
-    public ResponseEntity<?> recordDiscontinuity(@RequestParam String traceId, @RequestParam Boolean setValue, @RequestParam String userAgent){
+    @PostMapping("/setOptions")
+    public ResponseEntity<?> setOptions(@Valid @RequestBody ProgramOptionCommand programOptionCommand){
 
-        recordManifest.recordAdLog(traceId, setValue);
+        programService.setOptions(programOptionCommand);
 
         return ResponseEntity.ok().build();
     }

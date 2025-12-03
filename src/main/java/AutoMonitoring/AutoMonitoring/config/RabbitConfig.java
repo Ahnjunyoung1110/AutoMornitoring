@@ -12,6 +12,9 @@ import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainer
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 public class RabbitConfig {
 
@@ -58,6 +61,12 @@ public class RabbitConfig {
     @Bean DirectExchange provisioningExchange() { return new DirectExchange(RabbitNames.EX_PROVISIONING); }
     @Bean DirectExchange monitoringExchange() { return new DirectExchange(RabbitNames.EX_MONITORING); }
     @Bean DirectExchange delayExchange() { return new DirectExchange(RabbitNames.EX_DELAY); }
+    @Bean DirectExchange monitoringCommandExchange(){ return new DirectExchange(RabbitNames.EX_MONITORING_COMMAND); }
+    @Bean DirectExchange programCommandExchange(){ return new DirectExchange(RabbitNames.EX_PROGRAM_COMMAND); }
+    @Bean
+    public DirectExchange validExchange() {
+        return new DirectExchange(RabbitNames.EX_VALID);
+    }
     @Bean TopicExchange deadLetterExchange() { return new TopicExchange(RabbitNames.EX_DEAD_LETTER); }
 
 
@@ -65,13 +74,42 @@ public class RabbitConfig {
     @Bean Queue qStage1() { return new Queue(RabbitNames.Q_STAGE1, true); }
     @Bean Queue qStage2() { return new Queue(RabbitNames.Q_STAGE2, true); }
     @Bean Queue qStage3() { return new Queue(RabbitNames.Q_STAGE3, true); }
-    @Bean Queue qValid() { return new Queue(RabbitNames.Q_VALID, true); }
+    @Bean Queue monitoringCommandQueue() { return new Queue(RabbitNames.Q_MONITORING_COMMAND, true); }
+    @Bean Queue programCommandQueue() { return new Queue(RabbitNames.Q_PROGRAM_COMMAND, true); }
 
     @Bean Binding bStage1() { return BindingBuilder.bind(qStage1()).to(provisioningExchange()).with(RabbitNames.RK_STAGE1); }
     @Bean Binding bStage2() { return BindingBuilder.bind(qStage2()).to(provisioningExchange()).with(RabbitNames.RK_STAGE2); }
     @Bean Binding bStage3() { return BindingBuilder.bind(qStage3()).to(provisioningExchange()).with(RabbitNames.RK_STAGE3); }
-    @Bean Binding bValid() { return BindingBuilder.bind(qValid()).to(provisioningExchange()).with(RabbitNames.RK_VALID);}
+    @Bean Binding bMonitoringCommand() { return BindingBuilder.bind(monitoringCommandQueue()).to(monitoringCommandExchange()).with(RabbitNames.RK_MONITORING_COMMAND);}
+    @Bean Binding bProgramCommand() { return BindingBuilder.bind(programCommandQueue()).to(programCommandExchange()).with(RabbitNames.RK_PROGRAM_COMMAND);}
 
+
+    @Bean
+    public Declarables validTopology() {
+        List<Declarable> declarables = new ArrayList<>();
+
+        for (int i = 0; i < RabbitNames.VALID_PARTITIONS; i++) {
+            String queueName = RabbitNames.qValid(i);      // "q.valid.0" ~
+            String routingKey = RabbitNames.routingValid(i); // "valid.0" ~
+
+            Queue q = QueueBuilder
+                    .durable(queueName)
+                    // 여기 TTL, DLX 등 기존 Q_VALID 옵션 그대로
+                    // .ttl(...)
+                    // .deadLetterExchange(...)
+                    .build();
+
+            Binding b = BindingBuilder
+                    .bind(q)
+                    .to(validExchange())
+                    .with(routingKey);
+
+            declarables.add(q);
+            declarables.add(b);
+        }
+
+        return new Declarables(declarables);
+    }
 
     // 3. Monitoring 토폴로지 (핵심 루프)
     @Bean Queue workQueue() {

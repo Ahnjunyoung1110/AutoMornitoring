@@ -1,8 +1,11 @@
 package AutoMonitoring.AutoMonitoring.domain.program.entity;
 
-import AutoMonitoring.AutoMonitoring.domain.program.dto.VariantDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
+import AutoMonitoring.AutoMonitoring.contract.program.VariantDTO;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,7 +21,13 @@ public class VariantInfoEmb {
     @Column(name = "bandwidth")               private Integer bandwidth; // bps
     @Column(name = "uri", length = 2048)      private String uri;        // 절대 URI 권장
     @Column(name = "audio_group", length = 64)private String audioGroup; // 선택
+    @Column(name = "sub_status")  @Enumerated(EnumType.STRING)              private ResolutionStatus status; // 각 resolution에 대한 상태
 
+
+
+    public void changeStatus(ResolutionStatus status){
+        this.status = status;
+    }
     public static VariantInfoEmb fromDto(VariantDTO d) {
         return VariantInfoEmb.builder()
                 .resolution(d.resolution()).bandwidth(d.bandwidth())

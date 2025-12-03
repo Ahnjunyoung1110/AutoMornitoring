@@ -1,9 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.ParseMediaManifest;
 import AutoMonitoring.AutoMonitoring.util.path.SnapshotStorePath;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
 
     @Override
-    public RecordMediaToRedisDTO parse(String manifest, Duration getDurationMs, String traceId, String resolution) {
+    public CheckValidDTO parse(String manifest, Duration getDurationMs, String traceId, String resolution) {
         if (manifest == null) throw new IllegalArgumentException("파싱하려는 매니페스트가 존재하지 않습니다.");
 
         String m = manifest.replace("\r\n", "\n").trim();
@@ -42,7 +42,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
         // 청크 파싱
         List<String> uris = new ArrayList<>();
-        int disCount = 0;
+        List<Integer> discontinuityPos = new ArrayList<>();
         boolean wrongExtinf = false;
 
         final double eps = 0.05; // 이정도의 오차는 DISCONTINUITY 가 없어도 혀용하겠어요!
@@ -68,8 +68,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
 
             // EXT-X-DISCONTINUITY 가 있는경우
             if(line.equals("#EXT-X-DISCONTINUITY")){
-                disCount++;
-                disUrl = Math.min(disUrl,i+2);
+                discontinuityPos.add(uris.size());
+                disUrl = Math.min(disUrl,i +2);
                 // 정상적인 EXTINF 라는 의미임으로 false
                 pendingExtinfOff = false;
                 continue;
@@ -92,19 +92,20 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         }
 
 
-        // discontinuity 가 등장했으면 m3u8을 일딴 저장. 추후 내부 광고이면 ttl을 하루 추후 valid 판정에서 외부 광고이면 20일을 유지한다.
-        if(disCount > 0){
-            try{
-                Path baseM3u8Url = snapshotStorePath.m3u8Base();
-                String url = lines[disUrl].trim();
-                Path savedPath = snapshotStore.saveSnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m);
-                log.info("%s .".formatted(savedPath));
-            } catch (IOException e){
-                throw new RuntimeException(
-                        "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);
+        // save 옵션에 m3u8의 저장을 처리한다.
+        try{
+            Path baseM3u8Url = snapshotStorePath.m3u8Base();
+            String url = "";
+            if(disUrl != 111){
+                url = lines[disUrl].trim();
             }
-
+            Path savedPath = snapshotStore.trySnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m, !discontinuityPos.isEmpty());
+            log.info("%s .".formatted(savedPath));
+        } catch (IOException e){
+            throw new RuntimeException(
+                    "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);
         }
+
 
 
         int segmentCount = uris.size();
@@ -119,7 +120,6 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                         .map(u -> extractTsName(stripQuery(u)))  // ← 여기서 파일명만
                         .toList()
         );
-        String tailUrisJson = toJsonArray(tailNames);
 
         // 3) hashNorm 계산 (정규화: 일부 태그 제거 + URI 쿼리 제거)
         String normalized = m.lines()
@@ -133,17 +133,19 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         String hashNorm = sha256Hex(normalized.getBytes(StandardCharsets.UTF_8));
 
         // 4) DTO 생성
-        return new RecordMediaToRedisDTO(
+        return new CheckValidDTO(
+                traceId,
+                resolution,
                 Instant.now(),     // tsEpochMs
                 getDurationMs,
                 seq,
                 dseq,
-                disCount,
+                discontinuityPos,
                 segmentCount,
                 hashNorm,
                 segFirstUri,
                 segLastUri,
-                tailUrisJson,
+                tailNames,
                 wrongExtinf
         );
     }
@@ -157,6 +159,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
     }
 
     private static String stripQuery(String uri) {
+        // 해당 url의 경우 param으로 세그먼트 번호를 넣기 떄문에 모두 입력
+        if(uri.startsWith("https://stream-us-east-1.getpublica.com")) return uri;
         int q = uri.indexOf('?');
         return q >= 0 ? uri.substring(0, q) : uri;
     }

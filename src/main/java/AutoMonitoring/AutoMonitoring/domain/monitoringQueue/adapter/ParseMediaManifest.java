@@ -1,9 +1,9 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter;
 
-import AutoMonitoring.AutoMonitoring.util.redis.dto.RecordMediaToRedisDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
 
 import java.time.Duration;
 
 public interface ParseMediaManifest {
-    RecordMediaToRedisDTO parse(String manifest, Duration requestDurationMs, String traceId, String resolution);
+    CheckValidDTO parse(String manifest, Duration requestDurationMs, String traceId, String resolution);
 }

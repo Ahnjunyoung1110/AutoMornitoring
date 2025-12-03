@@ -1,11 +1,13 @@
 package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.StopMonitoringMQCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.domain.api.service.UrlValidateCheck;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StartMonitoringDTO;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.StopMornitoringDTO;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
@@ -32,35 +34,28 @@ public class MonitoringServiceImpl implements MonitoringService {
     public void startMornitoring(StartMonitoringDTO dto) {
 
         // queue 에 넣을 dto 생성
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId());
-
-        String key = RedisKeys.queueFlag(dto.traceId(), dto.resolution());
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId(), dto.epoch());
         Duration ttl = Duration.ofMinutes(3);
 
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
         if(!isValidUrl){
             log.info("URL이 유효하지 않습니다." + dto.manifestUrl());
-            String stateKey = RedisKeys.state(dto.traceId(), dto.resolution());
-            redis.setValues(stateKey, "WRONG_URL");
-            throw new AmqpRejectAndDontRequeueException("Wrong sub Url");
-        }
-        boolean first = redis.getOpsAbsent(key, "1", ttl);
 
-
-
-        if(first){
-            // queue에 입력
-            rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
-            log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
+            ProgramStatusCommand statusCmd = new ProgramStatusCommand(dto.traceId(), dto.resolution(), ResolutionStatus.WRONG_URL);
+            rabit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, statusCmd);
+            throw new AmqpRejectAndDontRequeueException("Wrong sub Url %s".formatted(cmd.mediaUrl()));
         }
-        else{
-            log.info("이미 모니터링을 수행중입니다.");
-        }
+
+        rabit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
+        log.info("모니터링을 시작합니다." + cmd.traceId() + " " + cmd.resolution() + " " + cmd.userAgent());
+
     }
 
-    // 추후 구현
-    @Override
-    public void stopMornitoring(StopMornitoringDTO stopMornitoringDTO) {
 
+    // 모니터링을 중지한다.
+    @Override
+    public void stopMornitoring(StopMonitoringMQCommand stopMonitoringMQCommand) {
+        String epochKey = RedisKeys.messageEpoch(stopMonitoringMQCommand.traceId());
+        long epoch = redis.nextEpoch(epochKey);
     }
 }

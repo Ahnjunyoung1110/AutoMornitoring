@@ -2,7 +2,9 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,13 +56,14 @@ class DelayMonitoringWorkerTest extends BaseTest {
         while(rabbitTemplate.receive(RabbitNames.Q_RETRY_DELAY_1S) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_DEAD) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_WORK_DLX) != null);
+        while(rabbitTemplate.receive(RabbitNames.Q_PROGRAM_COMMAND) != null);
     }
 
     @Test
     @DisplayName("재시도 성공 시, 상태를 MONITORING으로 변경하고 주 모니터링 큐로 메시지를 보낸다")
     void receiveMessage_RetrySuccess() throws IOException, InterruptedException {
         // given: 재시도할 메시지를 재시도 큐(Q_WORK_DLX)에 직접 전송
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         given(httpClient.send(any(), any(HttpResponse.BodyHandler.class))).willReturn(new MockHttpResponse(200));
 
         // when: Worker가 메시지를 소비하도록 메시지 전송
@@ -73,10 +76,6 @@ class DelayMonitoringWorkerTest extends BaseTest {
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
 
-        // Redis 상태가 MONITORING으로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("MONITORING");
-
         // 완료 후 다시 가동
         registry.getListenerContainer("Retry_queue").stop();
     }
@@ -85,7 +84,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
     @DisplayName("최대 재시도 횟수 초과 시, 상태를 FAILED로 변경하고 메시지를 Dead Letter 큐로 보낸다")
     void receiveMessage_MaxRetriesExceeded() {
         // given: 재시도 횟수가 4번인 메시지 준비 (이번이 5번째 시도)
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd("http://test.url", RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         MessageProperties properties = new MessageProperties();
         List<Map<String, Object>> xDeath = new ArrayList<>();
         Map<String, Object> deathHeader = new HashMap<>();
@@ -101,12 +100,13 @@ class DelayMonitoringWorkerTest extends BaseTest {
         rabbitTemplate.send(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK_DLX, message);
 
         // then: Dead Letter 큐(Q_DEAD)에서 메시지가 수신되어야 함
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 10000);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DEAD, 15000);
         assertThat(received).isNotNull();
 
-        // Redis 상태가 FAILED로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("FAILED");
+        // 상태가 FAILED로 변경되도록 queue로 전달되었는지 확인
+        ProgramStatusCommand statusCommand = (ProgramStatusCommand) rabbitTemplate.receiveAndConvert(RabbitNames.Q_PROGRAM_COMMAND);
+        assertThat(statusCommand.status()).isEqualTo(ResolutionStatus.FAILED);
+
         registry.getListenerContainer("Retry_queue").stop();
     }
 

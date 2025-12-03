@@ -1,4 +1,4 @@
-package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto;
+package AutoMonitoring.AutoMonitoring.contract.monitoringQueue;
 
 import java.time.Instant;
 
@@ -7,5 +7,7 @@ public record CheckMediaManifestCmd(String mediaUrl,
                                     String userAgent,
                                     Integer failCount,
                                     Instant publishTime,
-                                    String traceId) {
+                                    String traceId,
+                                    Long epoch
+) {
 }

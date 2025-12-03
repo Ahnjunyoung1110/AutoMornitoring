@@ -1,7 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.program.entity;
 
-
-import AutoMonitoring.AutoMonitoring.domain.program.dto.StreamDTO;
+import AutoMonitoring.AutoMonitoring.contract.program.StreamDTO;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;

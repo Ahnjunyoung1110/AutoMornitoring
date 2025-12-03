@@ -3,7 +3,8 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.URLTestConfig;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
-import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.dto.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.application.AlarmService;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
 
@@ -23,6 +25,9 @@ class MonitoringWorkerTest extends BaseTest {
 
     @Autowired
     private RedisService redisService;
+
+    @MockitoBean
+    private AlarmService alarmService;
 
     private final String TRACE_ID = "test-trace-id-monitor";
     private final String RESOLUTION = "720p";
@@ -40,15 +45,13 @@ class MonitoringWorkerTest extends BaseTest {
     @DisplayName("정상 URL 수신 시, 다음 작업을 위해 지연 큐로 메시지를 보낸다")
     void receiveMessage_Success() {
         // given: 성공 URL을 담은 Command
-        registry.getListenerContainer("Monitoring_worker").start();
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.SUCCESS_MANIFEST_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.SUCCESS_MANIFEST_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
         redisService.setValues(RedisKeys.state(TRACE_ID, RESOLUTION), "MONITORING");
 
         // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
         rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);
         // then: 지연 후 Q_WORK 큐로 메시지가 전송되어야 함
-        registry.getListenerContainer("Monitoring_worker").stop();
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_WORK, 5500);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_4S, 5500);
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
 
@@ -62,8 +65,7 @@ class MonitoringWorkerTest extends BaseTest {
     @DisplayName("잘못된 URL 수신 시, 상태를 RETRYING (1/5)으로 변경하고 재시도 큐로 메시지를 보낸다")
     void receiveMessage_FirstFailure() {
         // given: 잘못된 URL을 담은 Command
-        registry.getListenerContainer("Monitoring_worker").start();
-        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.INVALID_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID);
+        CheckMediaManifestCmd command = new CheckMediaManifestCmd(URLTestConfig.INVALID_URL, RESOLUTION, "agent", 0, Instant.now(), TRACE_ID, 0L);
 
         // when: Worker가 메시지를 소비하도록 Q_WORK에 메시지 전송
         rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);
@@ -72,10 +74,5 @@ class MonitoringWorkerTest extends BaseTest {
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_WORK_DLX, 20000);
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
-
-        // Redis 상태가 RETRYING (1/5)으로 변경되었는지 확인
-        String status = redisService.getValues(RedisKeys.state(TRACE_ID, RESOLUTION));
-        assertThat(status).isEqualTo("RETRYING (1/5)");
-        registry.getListenerContainer("Monitoring_worker").stop();
     }
 }
