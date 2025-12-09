@@ -29,6 +29,15 @@ public class Program {
     @Column(columnDefinition = "LONGTEXT")
     private String masterManifestUrl;
 
+    @Column(name = "channel_name")
+    private String channelName;
+
+    @Column(name = "channel_id")
+    private String channelId;
+
+    @Column(name = "tp")
+    private String tp;
+
     @Column(name = "format")
     private String format;
 
@@ -99,12 +108,18 @@ public class Program {
         this.UserAgent = program.getUserAgent();
         this.streams = program.getStreams();
         this.variants = program.getVariants();
+        this.channelName = program.getChannelName();
+        this.channelId = program.getChannelId();
+        this.tp = program.getTp();
     }
     /* ---------- 매핑 헬퍼 ---------- */
     public static Program fromDto(ProbeDTO dto) {
         var b = Program.builder()
                 .masterManifestUrl(dto.masterManifestUrl())
                 .traceId(dto.traceId())
+                .channelName(dto.channelName())
+                .channelId(dto.channelId())
+                .tp(dto.tp())
                 .format(dto.format())
                 .durationSec(dto.durationSec())
                 .UserAgent(dto.userAgent())

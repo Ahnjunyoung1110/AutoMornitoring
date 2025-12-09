@@ -146,7 +146,8 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 segFirstUri,
                 segLastUri,
                 tailNames,
-                wrongExtinf
+                wrongExtinf,
+                false
         );
     }
 

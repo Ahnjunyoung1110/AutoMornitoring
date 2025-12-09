@@ -2,6 +2,10 @@
 spring:
   application:
     name: AutoMornitoring
+  # slack.properties에 슬랙 알람 경로 지정
+  config:
+    import: optional:classpath:slack.properties
+  
   jpa:
     open-in-view: false
     properties:
@@ -12,6 +16,7 @@ spring:
     redis:
       timeout: 5s
       database: 0
+  # 하드코딩 되어있으나 추후 변경 예정
   storage:
     m3u8-dir: ${APP_BASE_M3U8_DIR:/file/m3u8}
     ts-dir: ${APP_BASE_TS_DIR:/file/ts}
@@ -22,9 +27,17 @@ server:
 
 logging:
   level:
-    org.hibernate.SQL: info
-    org.hibernate.orm.jdbc.bind: info
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
+
+# msa 로 변경시 api db 가 사용되는 api 요청 경로
+program-service:
+  url: http://localhost:8080
+
+#slack 에 전달할 url
+slack:
+  webhook-url: ${SLACK_WEBHOOK_URL:}
 
 
 # ffprobe 경로(기본값: ffprobe). 도커/리눅스면 /usr/bin/ffprobe 등으로 교체 가능
@@ -46,6 +59,7 @@ spring:
     url: jdbc:mysql://mysql:3306/mydatabase?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
     username: myuser
     password: secret
+
   jpa:
     hibernate:
       ddl-auto: update  # 운영에선 validate 권장
@@ -67,11 +81,21 @@ spring:
       mandatory: false
     publisher-confirm-type: correlated
 
+  security: # Spring Security 사용자 설정 추가
+    user:
+      name: admin # 원하는 사용자명으로 변경
+      password: admin_password # 원하는 비밀번호로 변경
+
   data:
     redis:
       host: redis      # docker-compose 서비스명
       port: 6379
       password: redispw
+
+logging:
+  level:
+    root: ERROR
+    AutoMonitoring: WARN
 
 # prod 전용 CORS (원하는 도메인으로 교체)
 cors:
@@ -98,5 +122,4 @@ spring:
       host: localhost
       port: 6379
       password:
-slack:
-  webhook-url: ${SLACK_WEBHOOK_URL}
+

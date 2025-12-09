@@ -1,12 +1,13 @@
 package AutoMonitoring.AutoMonitoring.domain.program.adapter;
 
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
-import AutoMonitoring.AutoMonitoring.contract.program.DbGetStatusCommand;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.StopMonitoringMQCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
 import AutoMonitoring.AutoMonitoring.domain.program.entity.Program;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ProgramService {
@@ -22,7 +23,12 @@ public interface ProgramService {
 
     void setStatus(ProgramStatusCommand c);
 
-    Map<String,String> getStatus(DbGetStatusCommand cmd);
 
-    void stopMonitoring(ProgramStopCommand c);
+    Map<String,String> getStatuesByTraceId(String traceId);
+
+    StopMonitoringMQCommand stopMonitoring(ProgramStopCommand c);
+
+    List<Program> getAllFailedPrograms();
+
+    void updateSystemConfig(AutoMonitoring.AutoMonitoring.contract.program.UpdateSystemConfigCommand command);
 }

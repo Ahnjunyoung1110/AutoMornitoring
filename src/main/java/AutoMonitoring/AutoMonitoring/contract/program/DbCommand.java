@@ -1,5 +1,7 @@
 package AutoMonitoring.AutoMonitoring.contract.program;
 
-public sealed interface DbCommand
+import AutoMonitoring.AutoMonitoring.contract.Command;
+
+public sealed interface DbCommand extends Command
         permits DbGetCommand, DbProbeCommand, LogValidationFailureCommand {
 }

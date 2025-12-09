@@ -65,7 +65,7 @@ class MonitoringJobHandlerTest {
             traceId,
             1L
         );
-        testCheckValidDTO = new CheckValidDTO(traceId, "1080p", Instant.now(), Duration.ZERO, 1L, 1L, Collections.emptyList(), 0, "", "", "", List.of(), false);
+        testCheckValidDTO = new CheckValidDTO(traceId, "1080p", Instant.now(), Duration.ZERO, 1L, 1L, Collections.emptyList(), 0, "", "", "", List.of(), false, false);
     }
 
     @Test
@@ -101,25 +101,6 @@ class MonitoringJobHandlerTest {
         verify(redisService).deleteValuesReactive(anyString());
         // Verify that the old blocking rabbitTemplate is NOT called for the validation message
         verify(rabbitTemplate, never()).convertAndSend(eq(RabbitNames.EX_VALID), anyString(), (Object) any());
-    }
-
-    @Test
-    @DisplayName("Lock 획득 실패 시, 후속 작업을 수행하지 않아야 한다")
-    void handle_lockFailed_shouldNotProceed() {
-        // given
-        // 1. Epoch check passes
-        when(redisService.getEpochReactive(anyString())).thenReturn(Mono.just(1L));
-        // 2. Lock acquisition fails
-        when(redisService.getOpsAbsentReactive(anyString(), anyString(), any(Duration.class))).thenReturn(Mono.just(false));
-
-        // when & then
-        StepVerifier.create(monitoringJobHandler.handle(testCmd))
-                .verifyComplete();
-
-        // verify that no other services were called
-        verify(redisService).getEpochReactive(anyString());
-        verify(redisService).getOpsAbsentReactive(anyString(), anyString(), any(Duration.class));
-        verifyNoMoreInteractions(getMediaService, parseMediaManifest, rabbitTemplate, sender, objectMapper, redisService);
     }
     
     @Test

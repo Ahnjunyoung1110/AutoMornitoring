@@ -17,6 +17,8 @@ public interface RedisService {
     long nextEpoch(String key);
     long getEpoch(String key);
     void deleteValues(String key);
+    Long increment(String key, Long delta); // increment 메소드 추가
+    void expire(String key, Duration ttl); // expire 메소드 추가
 
     // Reactive methods
     Mono<Boolean> getOpsAbsentReactive(String key, String value, Duration ttl);

@@ -63,6 +63,7 @@ public class RabbitConfig {
     @Bean DirectExchange delayExchange() { return new DirectExchange(RabbitNames.EX_DELAY); }
     @Bean DirectExchange monitoringCommandExchange(){ return new DirectExchange(RabbitNames.EX_MONITORING_COMMAND); }
     @Bean DirectExchange programCommandExchange(){ return new DirectExchange(RabbitNames.EX_PROGRAM_COMMAND); }
+    @Bean DirectExchange checkValidCommandExchange(){ return new DirectExchange(RabbitNames.EX_CHECKVALID_COMMAND); }
     @Bean
     public DirectExchange validExchange() {
         return new DirectExchange(RabbitNames.EX_VALID);
@@ -76,12 +77,14 @@ public class RabbitConfig {
     @Bean Queue qStage3() { return new Queue(RabbitNames.Q_STAGE3, true); }
     @Bean Queue monitoringCommandQueue() { return new Queue(RabbitNames.Q_MONITORING_COMMAND, true); }
     @Bean Queue programCommandQueue() { return new Queue(RabbitNames.Q_PROGRAM_COMMAND, true); }
+    @Bean Queue checkValidCommandQueue() { return new Queue(RabbitNames.Q_CHECKVALID_COMMAND, true); }
 
     @Bean Binding bStage1() { return BindingBuilder.bind(qStage1()).to(provisioningExchange()).with(RabbitNames.RK_STAGE1); }
     @Bean Binding bStage2() { return BindingBuilder.bind(qStage2()).to(provisioningExchange()).with(RabbitNames.RK_STAGE2); }
     @Bean Binding bStage3() { return BindingBuilder.bind(qStage3()).to(provisioningExchange()).with(RabbitNames.RK_STAGE3); }
     @Bean Binding bMonitoringCommand() { return BindingBuilder.bind(monitoringCommandQueue()).to(monitoringCommandExchange()).with(RabbitNames.RK_MONITORING_COMMAND);}
     @Bean Binding bProgramCommand() { return BindingBuilder.bind(programCommandQueue()).to(programCommandExchange()).with(RabbitNames.RK_PROGRAM_COMMAND);}
+    @Bean Binding bCheckValidCommand() { return BindingBuilder.bind(checkValidCommandQueue()).to(checkValidCommandExchange()).with(RabbitNames.RK_CHECKVALID_COMMAND);}
 
 
     @Bean

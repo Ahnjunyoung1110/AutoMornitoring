@@ -70,8 +70,8 @@ services:
       APP_BASE_M3U8_DIR: /file/m3u8
       APP_BASE_TS_DIR: /file/ts
     volumes:
-      - C:/Users/jyahn/file/m3u8:/file/m3u8   # m3u8 스냅샷 저장소
-      - C:/Users/jyahn/file/ts:/file/ts       # ts 스냅샷 저장소
+      - ./files/m3u8:/file/m3u8   # m3u8 스냅샷 저장소
+      - ./files/ts:/file/ts       # ts 스냅샷 저장소
     ports:
       - "8080:8080"   # 앱 외부 노출
 

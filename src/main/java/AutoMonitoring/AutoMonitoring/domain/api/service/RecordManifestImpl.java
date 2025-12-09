@@ -1,5 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.api.service;
 
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshAllFailedCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshRequestCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
 import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
@@ -45,6 +46,13 @@ public class RecordManifestImpl implements RecordManifest {
     @Override
     public void stopMonitoring(String traceId) {
         ProgramStopCommand command = new ProgramStopCommand(traceId);
+        programPublisher.publish(command);
+    }
+
+    // 모든 실패한 채널을 refresh 한다
+    @Override
+    public void refreshAllMonitoring(){
+        ProgramRefreshAllFailedCommand command = new ProgramRefreshAllFailedCommand();
         programPublisher.publish(command);
     }
 

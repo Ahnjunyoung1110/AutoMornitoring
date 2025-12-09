@@ -35,6 +35,7 @@ public class MonitoringJobHandler {
     private final RabbitTemplate rabbit;               // 동기 (sendDelay에서 사용)
     private final Sender sender;                       // 비동기 발송용
     private final ObjectMapper objectMapper;           // DTO 직렬화용
+    private final MonitoringConfigHolder monitoringConfigHolder;
 
     public Mono<Void> handle(CheckMediaManifestCmd cmd) {
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
@@ -115,7 +116,7 @@ public class MonitoringJobHandler {
     // 다음 모니터링 작업을 위해 지연 메시지를 전송
     void sendDelay(CheckMediaManifestCmd cmd) {
         Instant now = Instant.now();
-        final long baseDelay = 5_000L; // 기본 딜레이 5초
+        final long baseDelay = 5000L; // 기본 딜레이 5초
 
         Instant prevDue = cmd.publishTime() != null ? cmd.publishTime() : now;
         Instant nextDue = prevDue.plusMillis(baseDelay);

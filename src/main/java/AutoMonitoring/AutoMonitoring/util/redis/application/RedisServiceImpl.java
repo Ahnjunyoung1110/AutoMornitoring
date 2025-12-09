@@ -128,6 +128,16 @@ public class RedisServiceImpl implements RedisService {
         redisTemplate.delete(key);
     }
 
+    @Override
+    public Long increment(String key, Long delta) {
+        return redisTemplate.opsForValue().increment(key, delta);
+    }
+
+    @Override
+    public void expire(String key, Duration ttl) {
+        redisTemplate.expire(key, ttl);
+    }
+
     // --- Reactive Methods ---
 
     @Override
