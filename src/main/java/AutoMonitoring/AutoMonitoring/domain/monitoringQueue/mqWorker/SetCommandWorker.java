@@ -2,9 +2,9 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.Command;
+import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.QueueSystemConfigCommand;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.StopMonitoringMQCommand;
-import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.QueueSystemConfigCommand;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.adapter.MonitoringService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.application.SetOptionsService;
 import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util.MonitoringConfigHolder;
