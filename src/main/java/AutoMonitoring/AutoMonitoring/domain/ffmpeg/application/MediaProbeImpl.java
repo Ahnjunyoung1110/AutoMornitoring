@@ -16,17 +16,20 @@ import org.yaml.snakeyaml.util.UriEncoder;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -41,6 +44,27 @@ public class MediaProbeImpl implements MediaProbe {
     @Override
     public ProbeDTO probe(FfmpegCommand probeCommand) {
         try {
+            // URL에서 쿼리 파라미터 추출
+            Map<String, String> queryParams = Stream.of(probeCommand.masterUrl().split("[?&]"))
+                    .filter(s -> s.contains("="))
+                    .map(s -> s.split("=", 2))
+                    .collect(Collectors.toMap(
+                            a -> a[0],
+                            a -> a.length > 1 ? a[1] : "",
+                            (v1, v2) -> v1 // 중복 키의 경우 첫 번째 값을 사용
+                    ));
+
+            String channelName = queryParams.get("channel_name");
+            String channelId = queryParams.get("channel_id");
+            String tp = queryParams.get("tp");
+
+            try {
+                if (channelName != null) channelName = URLDecoder.decode(channelName, StandardCharsets.UTF_8);
+                if (channelId != null) channelId = URLDecoder.decode(channelId, StandardCharsets.UTF_8);
+                if (tp != null) tp = URLDecoder.decode(tp, StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                log.warn("URL 파라미터 디코딩에 실패했습니다.", e);
+            }
 
 
             String url = probeCommand.masterUrl().trim();
@@ -61,7 +85,7 @@ public class MediaProbeImpl implements MediaProbe {
                     "-show_format","-show_streams",
                     "-f","hls",                       // ★ HLS demuxer 강제
                     "-allowed_extensions","ALL",
-                    "-rw_timeout", "5000000",                 // 5초
+                    "-rw_timeout", "10000000",                 // 10초
                     "-max_reload", "1",         // 플레이리스트를 1번만 리로드하고 포기
                     "-extension_picky", "0",
                     "-protocol_whitelist","file,http,https,tcp,tls,crypto", // ★ 내부 fetch 허용
@@ -121,18 +145,20 @@ public class MediaProbeImpl implements MediaProbe {
             List<VariantDTO> variants = parseMasterM3u8(escapedUrl);
 
             // 5) ProbeDTO 생성
-            return new ProbeDTO(
-                    probeCommand.traceId(),
-                    Instant.now(),
-                    probeCommand.masterUrl(),
-                    probeCommand.userAgent(),
-                    formatName,
-                    durationSec,
-                    overallBitrate,
-                    null,
-                    streamDTOs,
-                    variants
-            );
+            return ProbeDTO.builder()
+                    .traceId(probeCommand.traceId())
+                    .masterManifestUrl(probeCommand.masterUrl())
+                    .channelName(channelName)
+                    .channelId(channelId)
+                    .tp(tp)
+                    .userAgent(probeCommand.userAgent())
+                    .format(formatName)
+                    .durationSec(durationSec)
+                    .overallBitrate(overallBitrate)
+                    .saveM3u8State(null) // 초기 상태는 null
+                    .streams(streamDTOs)
+                    .variants(variants)
+                    .build();
         } catch (Exception e) {
             throw new IllegalArgumentException("probe failed: " + e.getMessage(), e);
         }

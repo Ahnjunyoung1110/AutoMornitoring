@@ -17,6 +17,7 @@ public record CheckValidDTO(
         String segFirstUri,    // 첫 세그먼트 URI (쿼리X)
         String segLastUri,       // 마지막 세그먼트 URI (쿼리X)
         List<String> tailUris, // ← ["seg123.ts","seg124.ts","seg125.ts"]의 마지막 3개
-        boolean wrongExtinf // EXTINF 가 5가 아닌데 이후에 #EXT-X-DISCONTINUITY 가 등장하지 않은경우 true
+        boolean wrongExtinf, // EXTINF 가 5가 아닌데 이후에 #EXT-X-DISCONTINUITY 가 등장하지 않은경우 true
+        boolean refresh     // true 인 경우 기존의 데이터를 모두 정리하고 새로 시작한다.(오류 발생 X)
 ) {
 }

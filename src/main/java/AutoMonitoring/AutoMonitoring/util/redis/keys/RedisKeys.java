@@ -17,4 +17,9 @@ public final class RedisKeys {
     public static String alert(String traceId, String resolution) {return "hls:%s:alert:%s".formatted(traceId, resolution); }
 
     public static String messageEpoch(String traceId) {return "hls:%s:epoch".formatted(traceId); }
+
+    // Alarm-related keys
+    public static String alarmCountKey(String traceId, String resolution) { return "alarm:%s:%s:count".formatted(traceId, resolution); }
+    public static String alarmCooldownKey(String traceId, String resolution) { return "alarm:%s:%s:cooldown".formatted(traceId, resolution); }
+    public static String channelAlarmCountKey(String resolution) { return "alarm:channel:%s:count".formatted(resolution); }
 }

@@ -60,8 +60,14 @@ public class RecordController {
     @PostMapping("/{traceId}/stop")
     public ResponseEntity<Void> stopMonitoring(@PathVariable String traceId){
 
+        recordManifest.stopMonitoring(traceId);
+        return ResponseEntity.ok().build();
+    }
 
+    @PostMapping("/refreshAll")
+    public ResponseEntity<Void> refreshAll(){
 
+        recordManifest.refreshAllMonitoring();
         return ResponseEntity.ok().build();
     }
 

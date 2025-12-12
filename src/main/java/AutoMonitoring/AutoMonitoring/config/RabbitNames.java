@@ -41,6 +41,11 @@ public final class RabbitNames {
     public static final String RK_MONITORING_COMMAND = "route.monitoring.command";
     public static final String EX_MONITORING_COMMAND = "ex.monitoring.command";
 
+    // CheckValid 도메인에 커맨드를 입력하는 큐
+    public static final String Q_CHECKVALID_COMMAND  = "queue.checkvalid.command";
+    public static final String RK_CHECKVALID_COMMAND = "route.checkvalid.command";
+    public static final String EX_CHECKVALID_COMMAND = "ex.checkvalid.command";
+
     // Delay Queues & R-Keys (for monitoring loop)
     public static final String Q_DELAY_DEFAULT  = "ttl.delay.queue";
     public static final String Q_DELAY_1S       = "ttl.delay.queue.1s";

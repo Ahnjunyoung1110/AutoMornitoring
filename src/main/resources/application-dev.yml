@@ -2,6 +2,10 @@ spring:
   config:
     import: optional:classpath:slack.properties
 
+  storage:
+    m3u8-dir: ./files/m3u8
+    ts-dir: ./files/ts
+
   data:
     redis:
       host: localhost   # 컨테이너 포트 매핑했다면
@@ -25,5 +29,17 @@ spring:
     open-in-view: false
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
+
+  security: # Spring Security 사용자 설정 추가
+    user:
+      name: admin # 원하는 사용자명으로 변경
+      password: admin_password # 원하는 비밀번호로 변경
+program-service:
+  url: http://localhost:8080
+
 slack:
   webhook-url: ${SLACK_WEBHOOK_URL}
+logging:
+  level:
+    root: ERROR
+    AutoMonitoring: WARN

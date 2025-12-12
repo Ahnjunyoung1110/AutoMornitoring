@@ -2,16 +2,16 @@ package AutoMonitoring.AutoMonitoring.domain.monitoringQueue.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.CheckMediaManifestCmd;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshRequestCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ResolutionStatus;
+import AutoMonitoring.AutoMonitoring.domain.monitoringQueue.util.MonitoringConfigHolder;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import AutoMonitoring.AutoMonitoring.util.redis.keys.RedisKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageBuilder;
-import org.springframework.amqp.core.MessagePropertiesBuilder;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -20,6 +20,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class DelayMonitoringWorker {
     private final RedisService redisService;
     private final HttpClient httpClient;
     private final RabbitTemplate rabbit;
+    private final MonitoringConfigHolder monitoringConfigHolder;
 
     // 메시지를 받아 처리하는 함수, 처리에 실패하면 1초 후 다시 큐에 넣는다.
     @RabbitListener(id = "Retry_queue",queues = RabbitNames.Q_WORK_DLX
@@ -53,12 +55,19 @@ public class DelayMonitoringWorker {
         int attempt = deathCountForQueue(m, RabbitNames.Q_RETRY_DELAY_1S);
         ProgramStatusCommand programStatusCommand;
         // 최대 재시도 횟수 확인 (0,1,2,3 -> 4번 재시도 후 이번이 5번째 시도)
-        if( attempt >= 10){
-            log.warn("최대 재시도 횟수(10회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", cmd.traceId(), cmd.resolution());
+        if( attempt >= monitoringConfigHolder.getReconnectThreshold().get()){
+            log.warn("최대 재시도 횟수({}회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", monitoringConfigHolder.getReconnectThreshold(), cmd.traceId(), cmd.resolution());
+
+            if (monitoringConfigHolder.getAutoRefresh().get()) {
+                log.info("Auto-refresh is enabled. Triggering refresh for traceId: {}", cmd.traceId());
+                ProgramRefreshRequestCommand refreshCmd = new ProgramRefreshRequestCommand(cmd.traceId());
+                rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, refreshCmd);
+            }
+            
             // 1. 최종 FAILED 상태 기록
             programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.FAILED);
             rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
-            throw new AmqpRejectAndDontRequeueException("10회 이상 재시도 실패 %s, %s".formatted(cmd.traceId(), cmd.resolution()));
+            throw new AmqpRejectAndDontRequeueException("%d회 이상 재시도 실패 %s, %s".formatted(monitoringConfigHolder.getReconnectThreshold().get(), cmd.traceId(), cmd.resolution()));
         }
 
         String lockKey = RedisKeys.workerLock(cmd.traceId(), cmd.resolution());
@@ -72,10 +81,10 @@ public class DelayMonitoringWorker {
 
         try{
             int currentAttempt = attempt + 2; // 사용자에게 보여줄 재시도 횟수 (2/5 부터 시작)
-            log.info("재시도 요청을 수행합니다. (시도: {}/5) url: {}", currentAttempt, cmd.mediaUrl());
+            log.info("재시도 요청을 수행합니다. (시도: {}/{}) url: {}", currentAttempt, monitoringConfigHolder.getReconnectThreshold(), cmd.mediaUrl());
 
             HttpRequest req = HttpRequest.newBuilder(URI.create(cmd.mediaUrl()))
-                    .timeout(Duration.ofSeconds(4))
+                    .timeout(Duration.ofMillis(monitoringConfigHolder.getReconnectTimeoutMillis().get()))
                     .header("Accept", "*/*")
                     .header("Accept-Encoding", "gzip, deflate")
                     .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
@@ -86,10 +95,29 @@ public class DelayMonitoringWorker {
                     .GET()
                     .build();
 
-            HttpResponse<Void> response = httpClient.send(req, HttpResponse.BodyHandlers.discarding());
-            int code = response.statusCode();
+            HttpResponse<byte[]> response =
+                    httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
 
-            if (code < 200 || code >= 400){
+            int code = response.statusCode();
+            String encoding = response.headers()
+                    .firstValue("Content-Encoding")
+                    .orElse("");
+
+            byte[] bodyBytes = response.body();
+            String bodyStr;
+
+            if ("gzip".equalsIgnoreCase(encoding)) {
+                try (var gis = new java.util.zip.GZIPInputStream(
+                        new java.io.ByteArrayInputStream(bodyBytes))) {
+                    bodyStr = new String(gis.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            } else {
+                bodyStr = new String(bodyBytes, StandardCharsets.UTF_8);
+            }
+
+            if (code < 200 || code >= 400) {
+                log.warn("요청 실패 - status: {}, header: {}, body: {}",
+                        code, response.headers().map(), bodyStr);
                 throw new RuntimeException("재시도 실패. HTTP Status: " + code);
             }
 
@@ -100,18 +128,15 @@ public class DelayMonitoringWorker {
             rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
         }
         catch (Exception e){
-            int nextAttempt = attempt + 2;
-            log.warn("재시도 실패 ({}). 1초 후 다시 시도합니다. Error: {}", nextAttempt, e.getMessage());
+            long delayMillis = monitoringConfigHolder.getReconnectRetryDelayMillis().get();
+            int nextAttempt = attempt + 1;
+            log.warn("재시도 실패 ({}). {}ms 후 다시 시도합니다. Error: {}, {} , {}, {}", nextAttempt, delayMillis, e.getMessage(), cmd.traceId(), cmd.resolution(), cmd.mediaUrl());
 
             // 실패 시, EX_DELAY를 통해 재시도 딜레이 큐로 메시지를 보냄
-            rabbit.convertAndSend(RabbitNames.EX_DELAY, RabbitNames.RK_RETRY_DELAY_1S, MessageBuilder
-                    .withBody(m.getBody())
-                    .andProperties(
-                            MessagePropertiesBuilder
-                                    .fromClonedProperties(m.getMessageProperties())
-                                    .build()
-                    )
-                    .build());
+            rabbit.convertAndSend(RabbitNames.EX_DELAY, RabbitNames.RK_RETRY_DELAY_1S, m, msg -> {
+                msg.getMessageProperties().setExpiration(String.valueOf(delayMillis));
+                return msg;
+            });
         }
         finally {
             redisService.deleteValues(lockKey);

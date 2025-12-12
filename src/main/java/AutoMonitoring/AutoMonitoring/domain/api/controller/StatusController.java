@@ -1,6 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.api.controller;
 
-import AutoMonitoring.AutoMonitoring.domain.api.service.StatusService;
+import AutoMonitoring.AutoMonitoring.domain.api.client.StatusClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,14 +15,14 @@ import java.util.Map;
 @RequestMapping("/api/status")
 public class StatusController {
 
-    private final StatusService statusService;
+    private final StatusClient statusClient;
 
     @GetMapping("/{traceId}")
     public ResponseEntity<Map<String, String>> getTraceIdStatus(@PathVariable String traceId) {
-        Map<String,String> status = statusService.getAllStatusesForTraceId(traceId);
-        if (status.isEmpty()) {
+        ResponseEntity<Map<String, String>> response = statusClient.getStatusByTraceId(traceId);
+        if (response.getBody() == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(status);
+        return response;
     }
 }

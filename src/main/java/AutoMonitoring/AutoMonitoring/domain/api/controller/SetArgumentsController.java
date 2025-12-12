@@ -25,4 +25,5 @@ public class SetArgumentsController {
 
         return ResponseEntity.ok().build();
     }
+
 }

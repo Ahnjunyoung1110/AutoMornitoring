@@ -1,590 +1,600 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>AutoMonitoring Console</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoMonitoring 제어판</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f6f8fa; color: #24292f; }
+        .card { background-color: #ffffff; border-color: #d0d7de; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-header { background-color: #f6f8fa; border-bottom: 1px solid #d0d7de; font-weight: 500; }
+        .form-control, .form-select { border-color: #d0d7de; }
+        .btn-primary { --bs-btn-bg: #1f883d; --bs-btn-border-color: #1a7f37; --bs-btn-hover-bg: #1a7f37; --bs-btn-hover-border-color: #15732f; }
+        .result-box { background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 1rem; white-space: pre-wrap; word-break: break-all; font-family: "SFMono-Regular", Consolas, monospace; min-height: 100px; color: #24292f; }
+        .sortable-header { cursor: pointer; user-select: none; }
+        .sortable-header:hover { background-color: #f0f2f5; }
+        .table-hover > tbody > tr:hover > * { background-color: #f0f2f5; }
+        .input-group-text { background-color: #f6f8fa; }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-50">
-<div class="min-h-screen flex">
+<body>
+<div class="container py-5">
+    <header class="pb-3 mb-4 border-bottom">
+        <a href="/" class="d-flex align-items-center text-body text-decoration-none">
+            <img src="/favicon.ico" class="me-2" style="width: 90px; height: 90px;" alt="icon">
+            <span class="fs-4">AutoMonitoring 제어판</span>
+            <img src="/favicon.ico" class="me-2" style="width: 90px; height: 90px;" alt="icon">
+        </a>
+    </header>
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div class="px-6 py-4 border-b border-slate-800 flex items-center gap-2">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400">
-                AM
-            </span>
-            <div>
-                <div class="font-semibold text-slate-100">AutoMonitoring</div>
-                <div class="text-xs text-slate-400">HLS Validation Console</div>
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-terminal me-2"></i>API Log</div>
+                <div class="card-body">
+                    <div id="api-log" class="result-box" style="max-height: 200px; overflow-y: auto;">콘솔 준비 완료.</div>
+                </div>
             </div>
         </div>
 
-        <nav class="flex-1 px-3 py-4 space-y-2 text-sm">
-            <div class="text-xs font-semibold text-slate-500 uppercase px-2 mb-2">
-                Monitor
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-broadcast me-2"></i>실시간 모니터링 현황</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#search-collapse">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-monitoring-list">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="collapse" id="search-collapse">
+                    <div class="card-body bg-light">
+                        <form id="search-form" class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label for="search-traceId" class="form-label form-label-sm">Trace ID</label>
+                                <input type="text" class="form-control form-control-sm" id="search-traceId">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="search-channelId" class="form-label form-label-sm">Channel ID</label>
+                                <input type="text" class="form-control form-control-sm" id="search-channelId">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="search-tp" class="form-label form-label-sm">TP</label>
+                                <input type="text" class="form-control form-control-sm" id="search-tp">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="search-status" class="form-label form-label-sm">상태</label>
+                                <select class="form-select form-select-sm" id="search-status">
+                                    <option value="">전체</option>
+                                    <option value="MONITORING">MONITORING</option>
+                                    <option value="RETRYING">RETRYING</option>
+                                    <option value="FAILED">FAILED</option>
+                                    <option value="WRONG_URL">WRONG_URL</option>
+                                    <option value="STOP">STOP</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-grid">
+                                <button type="submit" class="btn btn-sm btn-primary">검색</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th class="sortable-header p-3" data-sort="traceId">Trace ID <i class="bi bi-arrow-down-up small"></i></th>
+                                <th class="sortable-header p-3" data-sort="channelName">Channel Name <i class="bi bi-arrow-down-up small"></i></th>
+                                <th class="sortable-header p-3" data-sort="channelId">Channel ID <i class="bi bi-arrow-down-up small"></i></th>
+                                <th class="sortable-header p-3" data-sort="tp">TP <i class="bi bi-arrow-down-up small"></i></th>
+                                <th class="p-3"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="monitoring-list-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <label for="pageSizeInput" class="form-label me-2 mb-0 small">개수:</label>
+                        <input type="number" class="form-control form-control-sm" id="pageSizeInput" value="20" style="width: 70px;">
+                    </div>
+                    <div id="monitoring-pagination" class="d-flex align-items-center"></div>
+                </div>
             </div>
-
-            <!-- 대시보드 버튼 -->
-            <button id="nav-dashboard"
-                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 text-slate-100">
-                <span class="w-1 h-4 rounded bg-emerald-500"></span>
-                대시보드
-            </button>
-
-            <!-- 채널 버튼 -->
-            <button id="nav-channels"
-                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-                <span class="w-1 h-4 rounded bg-slate-600"></span>
-                채널
-            </button>
-        </nav>
-
-        <div class="px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
-            <div>Last refresh: <span id="last-refresh" class="text-slate-300">–</span></div>
         </div>
-    </aside>
 
-    <!-- Main -->
-    <main class="flex-1 flex flex-col">
-        <!-- Top bar -->
-        <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6">
-            <div>
-                <div id="header-title" class="text-sm font-semibold text-slate-100">
-                    Validation Dashboard
-                </div>
-                <div id="header-subtitle" class="text-xs text-slate-400">
-                    실시간 HLS manifest 유효성 상태
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-plus-circle me-2"></i>신규 모니터링 시작</div>
+                <div class="card-body">
+                    <form id="form-probe">
+                        <div class="mb-3">
+                            <label for="probe-url" class="form-label">Manifest URL</label>
+                            <input type="text" class="form-control" id="probe-url" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="probe-ua" class="form-label">User-Agent (선택 사항)</label>
+                            <input type="text" class="form-control" id="probe-ua">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">요청</button>
+                    </form>
                 </div>
             </div>
-            <button id="refresh-btn"
-                    class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">
-                새로고침
-            </button>
-        </header>
+        </div>
 
-        <!-- Views -->
-        <section class="flex-1 p-6">
-
-            <!-- 대시보드 화면 -->
-            <div id="view-dashboard" class="space-y-4">
-                <!-- 요약 카드 3개 -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-                        <div class="text-xs text-slate-400 mb-1">전체 채널</div>
-                        <div id="summary-total" class="text-2xl font-semibold text-slate-100">–</div>
-                    </div>
-                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-                        <div class="text-xs text-slate-400 mb-1">MONITORING 채널</div>
-                        <div id="summary-monitoring" class="text-2xl font-semibold text-emerald-300">–</div>
-                    </div>
-                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-                        <div class="text-xs text-slate-400 mb-1">최근 24시간 오류</div>
-                        <div id="summary-errors" class="text-2xl font-semibold text-red-300">–</div>
-                    </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-sliders me-2"></i>저장 옵션 설정</div>
+                <div class="card-body">
+                    <form id="form-set-options">
+                        <div class="mb-3">
+                            <label for="options-traceId" class="form-label">Trace ID</label>
+                            <input type="text" class="form-control" id="options-traceId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="options-state" class="form-label">SaveM3u8State</label>
+                            <select id="options-state" class="form-select">
+                                <option>NONE</option>
+                                <option>WITHOUT_ADSLATE</option>
+                                <option>WITH_ADSLATE</option>
+                                <option>ALWAYS</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">옵션 설정</button>
+                    </form>
                 </div>
+            </div>
+        </div>
 
-                <!-- 최근 알람 + 히스토리 -->
-                <div class="grid grid-cols-5 gap-4">
-                    <!-- 최근 알람 -->
-                    <div class="col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="text-lg">🚨</span>
-                                <div class="text-sm font-semibold text-slate-100">최근 알람</div>
-                            </div>
-                        </div>
-                        <div id="alarm-list" class="space-y-2 text-xs max-h-80 overflow-y-auto">
-                            <div class="text-slate-500 text-center py-6 text-xs">
-                                알람 데이터 로딩 중...
-                            </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-lightning-charge me-2"></i>채널 및 시스템 작업</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="action-traceId" class="form-label">특정 채널 작업</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="action-traceId" required>
+                            <button type="button" id="btn-refresh-channel-action" class="btn btn-outline-info"><i class="bi bi-arrow-clockwise"></i> 갱신</button>
+                            <button type="button" id="btn-stop-channel-action" class="btn btn-outline-danger"><i class="bi bi-stop-circle"></i> 중지</button>
                         </div>
                     </div>
-
-                    <!-- 최근 검증 히스토리 -->
-                    <div class="col-span-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-slate-100">최근 검증 히스토리</div>
-                            <div class="text-xs text-slate-500">최근 20건</div>
-                        </div>
-                        <div class="overflow-x-auto text-xs">
-                            <table class="min-w-full border-separate border-spacing-y-1">
-                                <thead class="text-[11px] uppercase text-slate-500">
-                                <tr>
-                                    <th class="text-left px-2 py-1">TraceId</th>
-                                    <th class="text-left px-2 py-1">Resolution</th>
-                                    <th class="text-left px-2 py-1">Status</th>
-                                    <th class="text-left px-2 py-1">Rule</th>
-                                    <th class="text-left px-2 py-1">Time</th>
-                                </tr>
-                                </thead>
-                                <tbody id="history-body" class="align-top">
-                                <tr>
-                                    <td colspan="5" class="px-2 py-4 text-center text-slate-500">
-                                        데이터 로딩 중...
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <hr>
+                    <div>
+                        <label class="form-label">전체 시스템 작업</label>
+                        <button type="button" id="btn-refresh-all" class="btn btn-warning w-100"><i class="bi bi-exclamation-triangle"></i> 실패한 모든 모니터링 갱신</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 채널 화면 -->
-            <div id="view-channels" class="hidden h-full">
-                <div class="grid grid-cols-5 gap-4 h-full">
-                    <!-- 채널 리스트 -->
-                    <div class="col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-slate-100">모니터링 채널</div>
-                            <button id="btn-open-new-channel"
-                                    class="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[11px] font-semibold text-slate-950">
-                                신규 등록
-                            </button>
-                        </div>
-                        <div id="channel-list" class="flex-1 overflow-y-auto text-xs space-y-1">
-                            <div class="text-slate-500 text-center py-6 text-xs">
-                                채널 목록 로딩 중...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 채널 상세 -->
-                    <div class="col-span-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <div id="channel-detail-title" class="text-sm font-semibold text-slate-100">
-                                    채널을 선택하세요
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-gear-fill me-2"></i>전체 시스템 설정</div>
+                <div class="card-body">
+                    <form id="form-config">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small">Threshold</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-threshold" class="form-control">
+                                    <span class="input-group-text" id="current-config-threshold"></span>
                                 </div>
-                                <div id="channel-detail-sub" class="text-xs text-slate-400">
-                                    왼쪽 목록에서 채널을 선택하면 상세 정보가 표시됩니다.
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Alarm Cooldown (s)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-alarmCooldownSeconds" class="form-control">
+                                    <span class="input-group-text" id="current-config-alarmCooldownSeconds"></span>
                                 </div>
                             </div>
-                            <button id="btn-refresh-channel"
-                                    class="px-2.5 py-1 rounded-lg bg-slate-800 text-[11px] text-slate-200 border border-slate-700 disabled:opacity-40"
-                                    disabled>
-                                Refresh
-                            </button>
+                            <div class="col-md-6">
+                                <label class="form-label small">Reconnect Threshold</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-reconnectThreshold" class="form-control">
+                                    <span class="input-group-text" id="current-config-reconnectThreshold"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Reconnect Timeout (ms)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-reconnectTimeoutMillis" class="form-control">
+                                    <span class="input-group-text" id="current-config-reconnectTimeoutMillis"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Reconnect Retry (ms)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-reconnectRetryDelayMillis" class="form-control">
+                                    <span class="input-group-text" id="current-config-reconnectRetryDelayMillis"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">HTTP Timeout (ms)</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="config-httpRequestTimeoutMillis" class="form-control">
+                                    <span class="input-group-text" id="current-config-httpRequestTimeoutMillis"></span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="row pt-2">
+                                    <div class="col-auto">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="config-alarmEnabled">
+                                            <label class="form-check-label small" for="config-alarmEnabled">Alarm</label>
+                                            <span class="badge ms-1" id="current-config-alarmEnabled"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="config-autoRefresh">
+                                            <label class="form-check-label small" for="config-autoRefresh">Auto Refresh</label>
+                                            <span class="badge ms-1" id="current-config-autoRefresh"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="config-monitoringEnabled">
+                                            <label class="form-check-label small" for="config-monitoringEnabled">Monitoring</label>
+                                            <span class="badge ms-1" id="current-config-monitoringEnabled"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary w-100 mt-3">전체 설정 업데이트</button>
+                            </div>
                         </div>
-
-                        <div id="channel-detail-body" class="text-xs text-slate-300 space-y-2">
-                            <!-- 선택 전 안내 -->
-                        </div>
-                    </div>
+                    </form>
                 </div>
-            </div>
-
-        </section>
-    </main>
-</div>
-
-<!-- 신규 채널 등록 모달 -->
-<div id="modal-backdrop" class="fixed inset-0 bg-black/60 items-center justify-center hidden">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5 w-full max-w-md">
-        <div class="flex items-center justify-between mb-3">
-            <div class="text-sm font-semibold text-slate-100">신규 채널 등록</div>
-            <button id="btn-close-modal" class="text-slate-400 text-xs hover:text-slate-200">닫기</button>
-        </div>
-        <div class="space-y-3 text-xs">
-            <div>
-                <label class="block mb-1 text-slate-300">Manifest URL</label>
-                <input id="input-new-url" type="text"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                       placeholder="https://example.com/master.m3u8">
-            </div>
-            <div>
-                <label class="block mb-1 text-slate-300">User-Agent</label>
-                <input id="input-new-ua" type="text" value="console-ui"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-            </div>
-            <div id="new-channel-status" class="text-[11px] text-slate-400"></div>
-            <div class="flex justify-end gap-2 mt-2">
-                <button id="btn-submit-new"
-                        class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950">
-                    등록
-                </button>
             </div>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalLabel">상세 정보</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="statusModalBody"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // === API endpoint 설정 ===
-    const API_BASE = ''; // 동일 도메인이면 '' 유지
-    const ENDPOINT_SUMMARY = API_BASE + '/api/dashboard/summary';
-    const ENDPOINT_ALARMS = API_BASE + '/api/dashboard/alarms?limit=10';
-    const ENDPOINT_HISTORY = API_BASE + '/api/dashboard/history?limit=20';
-    const ENDPOINT_CHANNEL_LIST = API_BASE + '/api/channels';
-    const ENDPOINT_CHANNEL_DETAIL = traceId => API_BASE + '/api/channels/' + encodeURIComponent(traceId);
-    const ENDPOINT_CHANNEL_CREATE = API_BASE + '/probe';
-    const ENDPOINT_CHANNEL_REFRESH = traceId => API_BASE + '/probe/' + encodeURIComponent(traceId) + '/refresh';
-
-    const lastRefreshEl = document.getElementById('last-refresh');
-
-    function formatTime(ts) {
-        if (!ts) return '-';
-        const d = new Date(ts);
-        if (Number.isNaN(d.getTime())) return ts;
-        return d.toLocaleString();
-    }
-
-    async function fetchJson(url, options) {
-        const res = await fetch(url, options);
-        if (!res.ok) {
-            throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+    const log = (message, data) => {
+        const logBox = document.getElementById('api-log');
+        const timestamp = new Date().toLocaleTimeString();
+        let content = `<div><span class="text-muted">[${timestamp}]</span> ${message}</div>`;
+        if (data) {
+            const pre = document.createElement('pre');
+            pre.className = 'bg-white p-2 rounded small';
+            pre.textContent = JSON.stringify(data, null, 2);
+            content += pre.outerHTML;
         }
-        if (res.status === 204) return null;
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) {
-            return await res.text();
-        }
-        return await res.json();
-    }
+        logBox.innerHTML += content;
+        logBox.scrollTop = logBox.scrollHeight;
+    };
 
-    // === 대시보드 렌더링 ===
-    const summaryTotalEl = document.getElementById('summary-total');
-    const summaryMonitoringEl = document.getElementById('summary-monitoring');
-    const summaryErrorsEl = document.getElementById('summary-errors');
-    const alarmListEl = document.getElementById('alarm-list');
-    const historyBodyEl = document.getElementById('history-body');
-
-    function renderSummary(data) {
-        if (!data) return;
-        summaryTotalEl.textContent = data.totalChannels ?? '-';
-        summaryMonitoringEl.textContent = data.monitoringChannels ?? '-';
-        summaryErrorsEl.textContent = data.errorLast24h ?? '-';
-    }
-
-    function renderAlarms(alarms) {
-        if (!alarms || alarms.length === 0) {
-            alarmListEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-xs">최근 알람이 없습니다.</div>';
-            return;
-        }
-        alarmListEl.innerHTML = alarms.map(a => {
-            const badge =
-                a.severity === 'ERROR'
-                    ? 'bg-red-500/10 text-red-300 border border-red-500/40'
-                    : 'bg-amber-500/10 text-amber-300 border border-amber-500/40';
-
-            return `
-            <div class="border border-slate-800 rounded-xl px-3 py-2 bg-slate-950/60 flex flex-col gap-1">
-                <div class="flex items-center justify-between">
-                    <span class="text-[11px] px-2 py-0.5 rounded-full ${badge}">
-                        ${a.severity || 'ERROR'}
-                    </span>
-                    <span class="text-[10px] text-slate-500">${formatTime(a.createdAt)}</span>
-                </div>
-                <div class="text-[11px] text-slate-200 line-clamp-2">
-                    ${a.summaryMessage || a.validationResult || ''}
-                </div>
-                <div class="flex flex-wrap gap-1 mt-1 text-[10px] text-slate-400">
-                    ${a.traceId ? `<span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">trace=${a.traceId}</span>` : ''}
-                    ${a.resolution ? `<span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">res=${a.resolution}</span>` : ''}
-                    ${a.ruleCode ? `<span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">rule=${a.ruleCode}</span>` : ''}
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    function renderHistory(rows) {
-        if (!rows || rows.length === 0) {
-            historyBodyEl.innerHTML = `
-            <tr>
-                <td colspan="5" class="px-2 py-4 text-center text-slate-500 text-xs">최근 검증 데이터가 없습니다.</td>
-            </tr>`;
-            return;
-        }
-        historyBodyEl.innerHTML = rows.map(r => {
-            let color = 'text-slate-300';
-            if (r.status === 'OK') color = 'text-emerald-300';
-            else if (r.status === 'WARN') color = 'text-amber-300';
-            else if (r.status === 'ERROR') color = 'text-red-300';
-
-            return `
-            <tr class="bg-slate-950/70 hover:bg-slate-900">
-                <td class="px-2 py-1 align-top text-[11px] text-slate-200">${r.traceId || '-'}</td>
-                <td class="px-2 py-1 align-top text-[11px] text-slate-300">${r.resolution || '-'}</td>
-                <td class="px-2 py-1 align-top text-[11px] ${color}">${r.status || '-'}</td>
-                <td class="px-2 py-1 align-top text-[11px] text-slate-400">${r.ruleCode || '-'}</td>
-                <td class="px-2 py-1 align-top text-[11px] text-slate-500">${formatTime(r.createdAt)}</td>
-            </tr>`;
-        }).join('');
-    }
-
-    async function refreshDashboard() {
+    async function apiFetch(url, options) {
+        log(`요청: ${options.method || 'GET'} ${url}`, options.body ? JSON.parse(options.body) : undefined);
         try {
-            const [summary, alarms, history] = await Promise.all([
-                fetchJson(ENDPOINT_SUMMARY),
-                fetchJson(ENDPOINT_ALARMS),
-                fetchJson(ENDPOINT_HISTORY)
-            ]);
-            renderSummary(summary);
-            renderAlarms(alarms || []);
-            renderHistory(history || []);
-            lastRefreshEl.textContent = new Date().toLocaleTimeString();
-        } catch (e) {
-            console.error(e);
-            alarmListEl.innerHTML =
-                '<div class="text-red-400 text-center py-6 text-xs">알람 로드 실패: ' + e.message + '</div>';
+            const response = await fetch(url, options);
+            const isJson = response.headers.get('content-type')?.includes('application/json');
+            const data = isJson ? await response.json() : await response.text();
+            if (!response.ok) throw new Error(data.message || (typeof data === 'string' ? data : '오류가 발생했습니다.'));
+            log(`응답 성공: ${response.status}`, data);
+            return data;
+        } catch (error) {
+            log(`응답 실패: ${error.message}`);
+            throw error;
         }
     }
 
-    // === 채널 화면 ===
-    const channelListEl = document.getElementById('channel-list');
-    const channelDetailTitleEl = document.getElementById('channel-detail-title');
-    const channelDetailSubEl = document.getElementById('channel-detail-sub');
-    const channelDetailBodyEl = document.getElementById('channel-detail-body');
-    const btnRefreshChannel = document.getElementById('btn-refresh-channel');
-    let currentChannelTraceId = null;
+    const monitoringState = { page: 0, size: 20, sort: 'id', direction: 'DESC', traceId: '', channelId: '', tp: '', resolutionStatus: '' };
+    const monitoringListBody = document.getElementById('monitoring-list-body');
+    const paginationContainer = document.getElementById('monitoring-pagination');
+    const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+    const statusModalBody = document.getElementById('statusModalBody');
+    const statusModalLabel = document.getElementById('statusModalLabel');
 
-    function renderChannelList(channels) {
-        if (!channels || channels.length === 0) {
-            channelListEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-xs">등록된 채널이 없습니다.</div>';
+    async function fetchMonitoringPrograms() {
+        const { page, size, sort, direction, traceId, channelId, tp, resolutionStatus } = monitoringState;
+        const params = new URLSearchParams({ page, size, sort, direction });
+        if (traceId) params.append('traceId', traceId);
+        if (channelId) params.append('channelId', channelId);
+        if (tp) params.append('tp', tp);
+        if (resolutionStatus) params.append('resolutionStatus', resolutionStatus);
+
+        try {
+            const data = await apiFetch(`/api/dashboard/monitoring?${params}`, { method: 'GET' });
+            renderMonitoringList(data);
+            renderPagination(data);
+            updateSortIcons();
+        } catch (error) {
+            monitoringListBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">모니터링 목록을 불러오는데 실패했습니다.</td></tr>`;
+        }
+    }
+
+    function renderMonitoringList(data) {
+        monitoringListBody.innerHTML = '';
+        if (!data || data.content.length === 0) {
+            monitoringListBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-4">표시할 항목이 없습니다.</td></tr>`;
             return;
         }
-        channelListEl.innerHTML = channels.map(c => {
-            const statusColor =
-                c.status === 'MONITORING' ? 'text-emerald-300' :
-                    c.status === 'RETRYING' ? 'text-amber-300' :
-                        'text-slate-300';
-
-            return `
-            <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex flex-col gap-1"
-                    data-trace-id="${c.traceId}">
-                <div class="flex items-center justify-between">
-                    <span class="text-[11px] font-semibold text-slate-100 truncate">${c.traceId}</span>
-                    <span class="text-[10px] ${statusColor}">${c.status || '-'}</span>
-                </div>
-                <div class="text-[10px] text-slate-400 truncate">${c.manifestUrl || ''}</div>
-                <div class="text-[10px] text-slate-500">
-                    ${c.resolution || '-'} • 마지막 체크: ${formatTime(c.lastCheckedAt)}
-                </div>
-            </button>`;
-        }).join('');
-
-        channelListEl.querySelectorAll('button[data-trace-id]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const traceId = btn.getAttribute('data-trace-id');
-                if (traceId) {
-                    loadChannelDetail(traceId);
+        data.content.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.innerHTML = `
+                <td class="p-3 align-middle">${item.traceId || '-'}</td>
+                <td class="p-3 align-middle">${item.channelName || '-'}</td>
+                <td class="p-3 align-middle">${item.channelId || '-'}</td>
+                <td class="p-3 align-middle">${item.tp || '-'}</td>
+                <td class="p-3 align-middle text-end"><i class="bi bi-chevron-right"></i></td>
+            `;
+            tr.addEventListener('click', async () => {
+                statusModalLabel.textContent = `상세 정보: ${item.traceId}`;
+                statusModalBody.innerHTML = '<div class="d-flex justify-content-center p-5"><div class="spinner-border"></div></div>';
+                statusModal.show();
+                try {
+                    const statusData = await apiFetch(`/api/status/${item.traceId}`, { method: 'GET' });
+                    statusModalBody.innerHTML = `
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Master URL</dt><dd class="col-sm-9"><small class="text-break">${item.masterManifestUrl || '-'}</small></dd>
+                        </dl>
+                        <hr class="my-3">
+                        <h6><i class="bi bi-hdd-stack"></i> 해상도별 상태</h6>
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light"><tr><th>Resolution</th><th>Status</th></tr></thead>
+                            <tbody>${Object.entries(statusData).map(([res, status]) => `<tr><td>${res}</td><td>${status}</td></tr>`).join('')}</tbody>
+                        </table>`;
+                } catch (e) {
+                    statusModalBody.innerHTML = `<div class="alert alert-danger">상태 정보를 불러오는데 실패했습니다: ${e.message}</div>`;
                 }
             });
+            monitoringListBody.appendChild(tr);
         });
     }
 
-    function renderChannelDetail(detail) {
-        if (!detail) {
-            channelDetailTitleEl.textContent = '채널을 선택하세요';
-            channelDetailSubEl.textContent = '왼쪽 목록에서 채널을 선택하면 상세 정보가 표시됩니다.';
-            channelDetailBodyEl.innerHTML = '';
-            btnRefreshChannel.disabled = true;
-            currentChannelTraceId = null;
-            return;
-        }
-        currentChannelTraceId = detail.traceId;
-        btnRefreshChannel.disabled = false;
+    function renderPagination(data) {
+        paginationContainer.innerHTML = '';
+        if (!data || data.totalPages <= 0) return;
 
-        channelDetailTitleEl.textContent = detail.traceId || '(traceId 없음)';
-        channelDetailSubEl.textContent = detail.manifestUrl || '';
+        const { number, totalPages, first, last } = data;
+        const currentPage = number + 1;
 
-        const statusColor =
-            detail.status === 'MONITORING' ? 'text-emerald-300' :
-                detail.status === 'RETRYING' ? 'text-amber-300' :
-                    'text-slate-300';
+        // Previous button
+        paginationContainer.innerHTML += `<button class="btn btn-sm btn-outline-secondary me-1" data-page="${number - 1}" ${first ? 'disabled' : ''}>이전</button>`;
 
-        channelDetailBodyEl.innerHTML = `
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Status</div>
-                    <div class="text-[12px] ${statusColor}">${detail.status || '-'}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Resolution</div>
-                    <div class="text-[12px] text-slate-300">${detail.resolution || '-'}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Last Checked</div>
-                    <div class="text-[12px] text-slate-300">${formatTime(detail.lastCheckedAt)}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Created At</div>
-                    <div class="text-[12px] text-slate-300">${formatTime(detail.createdAt)}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Last Validation Result</div>
-                    <div class="text-[12px] text-slate-300">${detail.lastValidationResult || '-'}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Last Rule Code</div>
-                    <div class="text-[12px] text-slate-300">${detail.lastRuleCode || '-'}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Errors (24h)</div>
-                    <div class="text-[12px] text-red-300">${detail.errorCount24h ?? '-'}</div>
-                </div>
-                <div>
-                    <div class="text-[11px] text-slate-500 mb-1">Current Seq</div>
-                    <div class="text-[12px] text-slate-300">${detail.seq ?? '-'}</div>
-                </div>
-            </div>`;
+        // Page input form
+        paginationContainer.innerHTML += `
+            <form id="page-jump-form" class="d-flex align-items-center me-1">
+                <input type="number" class="form-control form-control-sm" value="${currentPage}" min="1" max="${totalPages}" style="width: 80px;">
+                <span class="mx-2 text-muted small">/ ${totalPages}</span>
+                <button type="submit" class="btn btn-sm btn-secondary">이동</button>
+            </form>
+        `;
+
+        // Next button
+        paginationContainer.innerHTML += `<button class="btn btn-sm btn-outline-secondary" data-page="${number + 1}" ${last ? 'disabled' : ''}>다음</button>`;
     }
 
-    async function refreshChannelList() {
-        try {
-            const channels = await fetchJson(ENDPOINT_CHANNEL_LIST);
-            renderChannelList(channels || []);
-        } catch (e) {
-            console.error(e);
-            channelListEl.innerHTML =
-                '<div class="text-red-400 text-center py-6 text-xs">채널 목록 로드 실패: ' + e.message + '</div>';
-        }
-    }
 
-    async function loadChannelDetail(traceId) {
-        try {
-            const detail = await fetchJson(ENDPOINT_CHANNEL_DETAIL(traceId));
-            renderChannelDetail(detail);
-        } catch (e) {
-            console.error(e);
-            channelDetailBodyEl.innerHTML =
-                '<div class="text-red-400 text-xs">상세 정보 로드 실패: ' + e.message + '</div>';
-        }
-    }
-
-    // === 신규 채널 모달 ===
-    const modalBackdrop = document.getElementById('modal-backdrop');
-    const btnOpenNewChannel = document.getElementById('btn-open-new-channel');
-    const btnCloseModal = document.getElementById('btn-close-modal');
-    const btnSubmitNew = document.getElementById('btn-submit-new');
-    const inputNewUrl = document.getElementById('input-new-url');
-    const inputNewUa = document.getElementById('input-new-ua');
-    const newChannelStatus = document.getElementById('new-channel-status');
-
-    function openModal() {
-        modalBackdrop.classList.remove('hidden');
-        modalBackdrop.classList.add('flex');
-        newChannelStatus.textContent = '';
-        inputNewUrl.value = '';
-        inputNewUrl.focus();
-    }
-
-    function closeModal() {
-        modalBackdrop.classList.add('hidden');
-        modalBackdrop.classList.remove('flex');
-    }
-
-    btnOpenNewChannel.addEventListener('click', openModal);
-    btnCloseModal.addEventListener('click', closeModal);
-
-    btnSubmitNew.addEventListener('click', async () => {
-        const url = inputNewUrl.value.trim();
-        const ua = inputNewUa.value.trim() || 'console-ui';
-
-        if (!url) {
-            newChannelStatus.textContent = 'Manifest URL을 입력하세요.';
-            newChannelStatus.className = 'text-[11px] text-red-400';
-            return;
-        }
-
-        newChannelStatus.textContent = '등록 중...';
-        newChannelStatus.className = 'text-[11px] text-slate-400';
-
-        try {
-            const res = await fetch(ENDPOINT_CHANNEL_CREATE, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({url, userAgent: ua})
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                newChannelStatus.textContent = '서버 오류: ' + text;
-                newChannelStatus.className = 'text-[11px] text-red-400';
-                return;
+    function updateSortIcons() {
+        document.querySelectorAll('.sortable-header').forEach(header => {
+            const key = header.dataset.sort;
+            const icon = header.querySelector('i');
+            if (key === monitoringState.sort) {
+                icon.className = monitoringState.direction === 'ASC' ? 'bi bi-arrow-up small' : 'bi bi-arrow-down small';
+            } else {
+                icon.className = 'bi bi-arrow-down-up small';
             }
+        });
+    }
 
-            const data = await res.json();
-            newChannelStatus.textContent = '등록 완료. traceId=' + (data.traceId || '(응답 없음)');
-            newChannelStatus.className = 'text-[11px] text-emerald-300';
-
-            await refreshChannelList();
-        } catch (e) {
-            newChannelStatus.textContent = '요청 실패: ' + e.message;
-            newChannelStatus.className = 'text-[11px] text-red-400';
+    paginationContainer.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-page')) {
+            e.preventDefault();
+            monitoringState.page = parseInt(e.target.getAttribute('data-page'));
+            fetchMonitoringPrograms();
         }
     });
 
-    // 채널 refresh 버튼
-    btnRefreshChannel.addEventListener('click', async () => {
-        if (!currentChannelTraceId) return;
-        btnRefreshChannel.disabled = true;
-        try {
-            await fetch(ENDPOINT_CHANNEL_REFRESH(currentChannelTraceId), {
-                method: 'POST'
-            });
-            // refresh 후 상세/대시보드 둘 다 다시 가져올지 여부는 자유
-            await loadChannelDetail(currentChannelTraceId);
-            await refreshDashboard();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            btnRefreshChannel.disabled = false;
+    paginationContainer.addEventListener('submit', (e) => {
+        if (e.target.id === 'page-jump-form') {
+            e.preventDefault();
+            const input = e.target.querySelector('input');
+            let targetPage = parseInt(input.value) - 1;
+            if (isNaN(targetPage)) targetPage = 0;
+
+            const totalPages = parseInt(input.max);
+            if (targetPage < 0) targetPage = 0;
+            if (targetPage >= totalPages) targetPage = totalPages - 1;
+
+            monitoringState.page = targetPage;
+            fetchMonitoringPrograms();
         }
     });
 
-    // === 네비게이션 (대시보드 / 채널 전환) ===
-    const navDashboard = document.getElementById('nav-dashboard');
-    const navChannels = document.getElementById('nav-channels');
-    const viewDashboard = document.getElementById('view-dashboard');
-    const viewChannels = document.getElementById('view-channels');
-    const headerTitle = document.getElementById('header-title');
-    const headerSubtitle = document.getElementById('header-subtitle');
+    document.getElementById('btn-refresh-monitoring-list').addEventListener('click', fetchMonitoringPrograms);
 
-    function showDashboard() {
-        viewDashboard.classList.remove('hidden');
-        viewChannels.classList.add('hidden');
-        navDashboard.classList.add('bg-slate-800', 'text-slate-100');
-        navChannels.classList.remove('bg-slate-800', 'text-slate-100');
-        navChannels.classList.add('text-slate-300');
-        headerTitle.textContent = 'Validation Dashboard';
-        headerSubtitle.textContent = '실시간 HLS manifest 유효성 상태';
-    }
-
-    function showChannels() {
-        viewChannels.classList.remove('hidden');
-        viewDashboard.classList.add('hidden');
-        navChannels.classList.add('bg-slate-800', 'text-slate-100');
-        navDashboard.classList.remove('bg-slate-800', 'text-slate-100');
-        navDashboard.classList.add('text-slate-300');
-        headerTitle.textContent = '채널 관리';
-        headerSubtitle.textContent = '모니터링 중인 채널 조회 및 제어';
-    }
-
-    navDashboard.addEventListener('click', () => {
-        showDashboard();
-        refreshDashboard();
+    document.getElementById('pageSizeInput').addEventListener('change', () => {
+        monitoringState.size = parseInt(document.getElementById('pageSizeInput').value);
+        monitoringState.page = 0;
+        fetchMonitoringPrograms();
     });
 
-    navChannels.addEventListener('click', () => {
-        showChannels();
-        refreshChannelList();
+    document.getElementById('search-form').addEventListener('submit', e => {
+        e.preventDefault();
+        monitoringState.traceId = document.getElementById('search-traceId').value;
+        monitoringState.channelId = document.getElementById('search-channelId').value;
+        monitoringState.tp = document.getElementById('search-tp').value;
+        monitoringState.resolutionStatus = document.getElementById('search-status').value;
+        monitoringState.page = 0;
+        fetchMonitoringPrograms();
     });
 
-    document.getElementById('refresh-btn').addEventListener('click', () => {
-        if (!viewDashboard.classList.contains('hidden')) {
-            refreshDashboard();
+    document.getElementById('search-status').addEventListener('change', () => {
+        monitoringState.resolutionStatus = document.getElementById('search-status').value;
+        monitoringState.page = 0;
+        fetchMonitoringPrograms();
+    });
+
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const sortKey = header.dataset.sort;
+            if (monitoringState.sort === sortKey) {
+                monitoringState.direction = monitoringState.direction === 'ASC' ? 'DESC' : 'ASC';
+            } else {
+                monitoringState.sort = sortKey;
+                monitoringState.direction = 'DESC';
+            }
+            monitoringState.page = 0;
+            fetchMonitoringPrograms();
+        });
+    });
+
+    document.getElementById('form-probe').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await apiFetch('/probe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: document.getElementById('probe-url').value, userAgent: document.getElementById('probe-ua').value || undefined }),
+        });
+        fetchMonitoringPrograms();
+    });
+
+    document.getElementById('btn-stop-channel-action').addEventListener('click', async () => {
+        const traceId = document.getElementById('action-traceId').value;
+        if (!traceId) { log('Trace ID를 입력하세요.'); return; }
+        await apiFetch(`/probe/${traceId}/stop`, { method: 'POST' });
+        fetchMonitoringPrograms();
+    });
+
+    document.getElementById('btn-refresh-channel-action').addEventListener('click', async () => {
+        const traceId = document.getElementById('action-traceId').value;
+        if (!traceId) { log('Trace ID를 입력하세요.'); return; }
+        await apiFetch(`/probe/${traceId}/refresh`, { method: 'POST' });
+        fetchMonitoringPrograms();
+    });
+
+    document.getElementById('btn-refresh-all').addEventListener('click', async () => {
+        await apiFetch('/probe/refreshAll', { method: 'POST' });
+        fetchMonitoringPrograms();
+    });
+
+    document.getElementById('form-set-options').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const traceId = document.getElementById('options-traceId').value;
+        const saveM3u8State = document.getElementById('options-state').value;
+        await apiFetch('/arguments/setOptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ traceId, saveM3u8State }),
+        });
+    });
+
+    document.getElementById('form-config').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const config = {
+            alarmEnabled: document.getElementById('config-alarmEnabled').checked,
+            autoRefresh: document.getElementById('config-autoRefresh').checked,
+            monitoringEnabled: document.getElementById('config-monitoringEnabled').checked,
+            threshold: parseInt(document.getElementById('config-threshold').value) || 0,
+            alarmCooldownSeconds: parseInt(document.getElementById('config-alarmCooldownSeconds').value) || 0,
+            reconnectThreshold: parseInt(document.getElementById('config-reconnectThreshold').value) || 0,
+            reconnectTimeoutMillis: parseInt(document.getElementById('config-reconnectTimeoutMillis').value) || 0,
+            reconnectRetryDelayMillis: parseInt(document.getElementById('config-reconnectRetryDelayMillis').value) || 0,
+            httpRequestTimeoutMillis: parseInt(document.getElementById('config-httpRequestTimeoutMillis').value) || 0,
+        };
+        await apiFetch('/api/config/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config),
+        });
+        loadCurrentConfig(); // 업데이트 후 최신 설정 다시 로드
+    });
+    
+    let defaultConfigStore = {};
+    const configInputIds = [
+        'threshold', 'alarmCooldownSeconds', 'reconnectThreshold',
+        'reconnectTimeoutMillis', 'reconnectRetryDelayMillis', 'httpRequestTimeoutMillis'
+    ];
+
+    function updateCurrentConfigValue(id, value, isSwitch = false) {
+        const currentEl = document.getElementById(`current-config-${id}`);
+        if (!currentEl) return;
+        
+        if (isSwitch) {
+            currentEl.textContent = value ? 'ON' : 'OFF';
+            currentEl.className = value ? 'badge bg-success ms-1' : 'badge bg-secondary ms-1';
         } else {
-            refreshChannelList();
-            if (currentChannelTraceId) {
-                loadChannelDetail(currentChannelTraceId);
-            }
+            currentEl.textContent = value;
         }
-    });
+    }
 
-    // 초기 로딩
-    showDashboard();
-    refreshDashboard();
+    async function loadCurrentConfig() {
+        try {
+            const current = await apiFetch('/api/config/current', { method: 'GET' });
+            if (!current) return;
+            
+            updateCurrentConfigValue('alarmEnabled', current.alarmEnabled, true);
+            updateCurrentConfigValue('autoRefresh', current.autoRefresh, true);
+            updateCurrentConfigValue('monitoringEnabled', current.monitoringEnabled, true);
+            configInputIds.forEach(id => updateCurrentConfigValue(id, current[id]));
+            
+            log('현재 적용된 설정 값을 화면에 표시했습니다.');
+        } catch (error) {
+            log('현재 적용된 설정 값을 불러오는데 실패했습니다.');
+        }
+    }
+
+    async function loadDefaults() {
+        try {
+            const defaults = await apiFetch('/api/config/defaults', { method: 'GET' });
+            if (!defaults) return;
+            defaultConfigStore = defaults; // 기본값 저장
+            
+            // Input 필드에 기본값 설정
+            document.getElementById('config-alarmEnabled').checked = defaults.alarmEnabled;
+            document.getElementById('config-autoRefresh').checked = defaults.autoRefresh;
+            document.getElementById('config-monitoringEnabled').checked = defaults.monitoringEnabled;
+            
+            configInputIds.forEach(id => {
+                const inputEl = document.getElementById(`config-${id}`);
+                if(inputEl) {
+                    inputEl.value = defaults[id];
+                    // 입력값이 비워지면 기본값으로 복원하는 이벤트 리스너
+                    inputEl.addEventListener('blur', (e) => {
+                        if (e.target.value === '') {
+                            e.target.value = defaultConfigStore[id];
+                        }
+                    });
+                }
+            });
+            log('기본 설정 값을 폼에 적용했습니다.');
+        } catch (error) {
+            log('기본 설정 값을 불러오는데 실패했습니다.');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDefaults();
+        loadCurrentConfig();
+        fetchMonitoringPrograms();
+    });
 </script>
+</body>
+</html>
 </body>
 </html>

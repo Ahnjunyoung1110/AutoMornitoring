@@ -1,10 +1,13 @@
 package AutoMonitoring.AutoMonitoring.domain.checkMediaValid.mqworker;
 
 
+import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.CheckValidDTO;
+import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.UpdateAlarmConfigCommand;
 import AutoMonitoring.AutoMonitoring.contract.checkMediaValid.ValidationResult;
 import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.adapter.ValidateCheckService;
 import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.application.AlarmService;
+import AutoMonitoring.AutoMonitoring.domain.checkMediaValid.util.CheckValidConfigHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -17,6 +20,7 @@ public class ValidateWorker {
 
     private final ValidateCheckService validateCheckService;
     private final AlarmService alarmService;
+    private final CheckValidConfigHolder configHolder;
 
     // 공통 처리 로직
     private void handle(CheckValidDTO dto) {
@@ -28,7 +32,7 @@ public class ValidateWorker {
 
                     // OK가 아니면 일단 로그는 남기고,
                     if (validationResult != ValidationResult.OK_FINE) {
-                        log.warn("이상현상 발생 {}", validationResult);
+                        log.warn("이상현상 발생 validationResult:{}, traceId: {}, resolution: {}", validationResult, dto.traceId(), dto.resolution());
                     }
 
                     // ERROR로 시작하는 경우에만 알람 발송
@@ -36,6 +40,12 @@ public class ValidateWorker {
                         alarmService.publishAlarm(validationResult.toString(), dto.resolution(), dto.traceId());
                     }
                 });
+    }
+
+    @RabbitListener(queues = RabbitNames.Q_CHECKVALID_COMMAND)
+    public void handleConfigUpdate(UpdateAlarmConfigCommand command) {
+        log.info("Received alarm configuration update: {}", command);
+        configHolder.updateConfig(command);
     }
 
     @RabbitListener(queues = "q.valid.0", concurrency = "1")

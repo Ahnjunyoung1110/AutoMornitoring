@@ -1,11 +1,12 @@
 package AutoMonitoring.AutoMonitoring.domain.api.service;
 
+import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshAllFailedCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramRefreshRequestCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
 import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
 import AutoMonitoring.AutoMonitoring.domain.api.mqWorker.ProbePublisher;
 import AutoMonitoring.AutoMonitoring.domain.api.mqWorker.ProgramPublisher;
-import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,13 @@ public class RecordManifestImpl implements RecordManifest {
     @Override
     public void stopMonitoring(String traceId) {
         ProgramStopCommand command = new ProgramStopCommand(traceId);
+        programPublisher.publish(command);
+    }
+
+    // 모든 실패한 채널을 refresh 한다
+    @Override
+    public void refreshAllMonitoring(){
+        ProgramRefreshAllFailedCommand command = new ProgramRefreshAllFailedCommand();
         programPublisher.publish(command);
     }
 

@@ -16,7 +16,6 @@ import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 
 @Service
@@ -35,7 +34,6 @@ public class MonitoringServiceImpl implements MonitoringService {
 
         // queue 에 넣을 dto 생성
         CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId(), dto.epoch());
-        Duration ttl = Duration.ofMinutes(3);
 
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
         if(!isValidUrl){

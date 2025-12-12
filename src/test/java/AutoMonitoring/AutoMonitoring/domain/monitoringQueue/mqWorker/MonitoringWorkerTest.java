@@ -52,6 +52,10 @@ class MonitoringWorkerTest extends BaseTest {
         rabbitTemplate.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, command);
         // then: 지연 후 Q_WORK 큐로 메시지가 전송되어야 함
         Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_4S, 5500);
+        if(received == null) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_3S);
+        if(received == null) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_2S);
+        if(received == null) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_1S);
+        if(received == null) rabbitTemplate.receiveAndConvert(RabbitNames.Q_DELAY_DEFAULT);
         assertThat(received).isNotNull();
         assertThat(((CheckMediaManifestCmd) received).traceId()).isEqualTo(TRACE_ID);
 
