@@ -154,13 +154,13 @@ public class RabbitConfig {
     @Bean Binding bWorkDlx() { return BindingBuilder.bind(workDlxQueue()).to(monitoringExchange()).with(RabbitNames.RK_WORK_DLX); }
 
     @Bean Queue retryDelayQueue1s() { // 1초 재시도 딜레이를 위한 큐
-        return QueueBuilder.durable(RabbitNames.Q_RETRY_DELAY_1S)
+        return QueueBuilder.durable(RabbitNames.Q_RETRY_DELAY)
                 .deadLetterExchange(monitoringExchange().getName()) // 만료 후 monitoring exchange로
                 .deadLetterRoutingKey(RabbitNames.RK_WORK_DLX) // 재시도 큐(workDlxQueue)로 가도록
                 .ttl(1000)
                 .build();
     }
-    @Bean Binding bRetryDelay() { return BindingBuilder.bind(retryDelayQueue1s()).to(delayExchange()).with(RabbitNames.RK_RETRY_DELAY_1S); }
+    @Bean Binding bRetryDelay() { return BindingBuilder.bind(retryDelayQueue1s()).to(delayExchange()).with(RabbitNames.RK_RETRY_DELAY); }
 
 
     // 6. Dead-Letter 토폴로지 (최종 실패)

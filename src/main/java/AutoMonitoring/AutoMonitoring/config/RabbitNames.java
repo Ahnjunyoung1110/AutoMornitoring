@@ -59,8 +59,8 @@ public final class RabbitNames {
     public static final String RK_DELAY_4S      = "route.delay.4s";
 
     // Delay Queue & R-Key (for retry mechanism)
-    public static final String Q_RETRY_DELAY_1S = "ttl.retry.delay.1s";
-    public static final String RK_RETRY_DELAY_1S = "route.retry.delay.1s";
+    public static final String Q_RETRY_DELAY = "ttl.retry.delay";
+    public static final String RK_RETRY_DELAY = "route.retry.delay";
 
     // Monitoring Queues & R-Keys
     public static final String Q_WORK           = "working.queue.stage1";

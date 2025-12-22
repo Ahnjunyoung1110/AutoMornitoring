@@ -3,7 +3,6 @@ package AutoMonitoring.AutoMonitoring.contract.checkMediaValid;
 
 public enum ValidationResult {
     OK_FINE,                                    // 정상적인 상태
-    WARN_NO_CHANGE,                             // (LIVE) 진행 없음 최초
     WARN_SEQUENCE_CHANGE_TOO_FAR,
     WARN_SEQ_ROLLED_SEGMENTS_IDENTICAL,         // seq는 증가했는데 창(세그먼트 집합)은 동일
     WARN_SEGMENTS_CHANGED_SEQ_STUCK,            // 세그먼트는 바뀌었는데 seq는 그대로

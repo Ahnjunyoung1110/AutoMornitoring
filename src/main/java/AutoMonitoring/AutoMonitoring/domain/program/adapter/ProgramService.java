@@ -2,6 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.program.adapter;
 
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.SaveM3u8OptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.monitoringQueue.StopMonitoringMQCommand;
+import AutoMonitoring.AutoMonitoring.contract.program.ProgramInformation;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStatusCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramStopCommand;
@@ -23,8 +24,7 @@ public interface ProgramService {
 
     void setStatus(ProgramStatusCommand c);
 
-
-    Map<String,String> getStatuesByTraceId(String traceId);
+    Map<String, List<ProgramInformation>> getInformationByTraceId(String traceId);
 
     StopMonitoringMQCommand stopMonitoring(ProgramStopCommand c);
 

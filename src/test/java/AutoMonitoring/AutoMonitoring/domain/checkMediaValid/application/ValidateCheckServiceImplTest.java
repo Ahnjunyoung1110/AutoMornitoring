@@ -93,6 +93,7 @@ public class ValidateCheckServiceImplTest extends BaseTest {
                 "first_uri.ts",
                 lastUri + ".ts",
                 List.of(lastUri + "_-2.ts", lastUri + "_-1.ts", lastUri + ".ts"),
+                false,
                 false
         );
     }

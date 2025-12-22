@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,7 +83,7 @@ public class DbWorkerTest extends BaseTest {
         ProgramInfo receivedProgramInfo = objectMapper.readValue(new String(receivedMessage.getBody()), ProgramInfo.class);
         assertThat(receivedProgramInfo.getTraceId()).isEqualTo(traceId);
         assertThat(receivedProgramInfo.getUserAgent()).isEqualTo(probeDTO.userAgent());
-        assertThat(receivedProgramInfo.getResolutionToUrl()).hasSize(2);
+        assertThat(receivedProgramInfo.getVariantsByResolution()).hasSize(2);
     }
 
     @Test
@@ -107,7 +106,6 @@ public class DbWorkerTest extends BaseTest {
         programRepo.save(Program.fromDto(probeDTO));
         ProbeDTO refreshProbeDTO = ProbeDTO.builder()
                 .traceId(traceId)
-                .probeAt(Instant.now())
                 .masterManifestUrl("http://example.com/refreshed_master.m3u8")
                 .userAgent("RefreshedAgent")
                 .format("hls")
@@ -132,7 +130,7 @@ public class DbWorkerTest extends BaseTest {
         assertThat(receivedMessage).isNotNull();
         ProgramInfo receivedProgramInfo = objectMapper.readValue(new String(receivedMessage.getBody()), ProgramInfo.class);
         assertThat(receivedProgramInfo.getTraceId()).isEqualTo(traceId);
-        assertThat(receivedProgramInfo.getResolutionToUrl()).hasSize(1);
+        assertThat(receivedProgramInfo.getVariantsByResolution()).hasSize(1);
     }
 
     @Test
@@ -183,26 +181,25 @@ public class DbWorkerTest extends BaseTest {
     }
 
 
-    @Test
-    @Transactional
-    @DisplayName("handleDbGetStatusCommand_Success: 프로그램의 상태 정보를 성공적으로 조회한다.")
-    void handleDbGetStatusCommand_Success() {
-        // given
-        Program program = Program.fromDto(probeDTO);
-        program.findVariantByResolution("1920x1080").ifPresent(v -> v.changeStatus(ResolutionStatus.MONITORING));
-        program.findVariantByResolution("1280x720").ifPresent(v -> v.changeStatus(ResolutionStatus.RETRYING));
-        programRepo.save(program);
-        DbGetStatusCommand command = new DbGetStatusCommand(traceId);
-
-        // when
-        Object result = dbWorker.handle(command);
-
-        // then
-        assertThat(result).isInstanceOf(Map.class);
-        Map<String, String> statusMap = (Map<String, String>) result;
-        assertThat(statusMap.get("1920x1080")).isEqualTo(ResolutionStatus.MONITORING.name());
-        assertThat(statusMap.get("1280x720")).isEqualTo(ResolutionStatus.RETRYING.name());
-    }
+//    @Test
+//    @Transactional
+//    @DisplayName("handleDbGetStatusCommand_Success: 프로그램의 상태 정보를 성공적으로 조회한다.")
+//    void handleDbGetStatusCommand_Success() {
+//        // given
+//        Program program = Program.fromDto(probeDTO);
+//        program.findVariantByResolution("1920x1080").ifPresent(v -> v.changeStatus(ResolutionStatus.MONITORING));
+//        program.findVariantByResolution("1280x720").ifPresent(v -> v.changeStatus(ResolutionStatus.RETRYING));
+//        programRepo.save(program);
+//
+//        // when
+//        Object result = dbWorker.handle(command);
+//
+//        // then
+//        assertThat(result).isInstanceOf(Map.class);
+//        Map<String, String> statusMap = (Map<String, String>) result;
+//        assertThat(statusMap.get("1920x1080")).isEqualTo(ResolutionStatus.MONITORING.name());
+//        assertThat(statusMap.get("1280x720")).isEqualTo(ResolutionStatus.RETRYING.name());
+//    }
 
 
     @Test
@@ -271,7 +268,7 @@ public class DbWorkerTest extends BaseTest {
 
         // then
         Program updatedProgram = programRepo.findByTraceId(traceId).get();
-        VariantInfoEmb updatedVariant = updatedProgram.findVariantByResolution("1920x1080").get();
+        VariantInfoEmb updatedVariant = updatedProgram.findVariantByResolutionAndBandWidth("1920x1080", null).get();
         assertThat(updatedVariant.getStatus()).isEqualTo(ResolutionStatus.FAILED);
     }
 
@@ -289,7 +286,6 @@ public class DbWorkerTest extends BaseTest {
 
         return ProbeDTO.builder()
                 .traceId(traceId)
-                .probeAt(Instant.now())
                 .masterManifestUrl("http://example.com/master.m3u8")
                 .userAgent("TestAgent/1.0")
                 .format("hls")

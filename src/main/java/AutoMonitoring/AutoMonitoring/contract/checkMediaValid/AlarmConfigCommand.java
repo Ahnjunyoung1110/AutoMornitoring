@@ -1,6 +1,5 @@
 package AutoMonitoring.AutoMonitoring.contract.checkMediaValid;
 
-
 import AutoMonitoring.AutoMonitoring.contract.Command;
 
 public record AlarmConfigCommand (

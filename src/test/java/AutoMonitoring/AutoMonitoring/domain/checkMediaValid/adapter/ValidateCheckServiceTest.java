@@ -94,6 +94,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 "ts121.ts",
                 "ts130.ts",
                 List.of("ts128.ts", "ts129.ts", "ts130.ts"),
+                false,
                 false
         );
 
@@ -112,6 +113,8 @@ class ValidateCheckServiceTest extends BaseTest {
                 "ts123.ts", // 2 증가
                 "ts132.ts", // 2 증가
                 List.of("ts130.ts", "ts131.ts", "ts132.ts"),
+                false
+                ,
                 false
         );
 
@@ -151,7 +154,8 @@ class ValidateCheckServiceTest extends BaseTest {
                 "http://test.url/segment12345.ts", // Old segment
                 "http://test.url/segment12354.ts", // Old segment
                 List.of("segment12352.ts", "segment12353.ts", "segment12354.ts"),
-                false
+                false,
+                 false
         );
         
         // then
@@ -181,6 +185,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 "http://test.url/segment12346.ts", // New segment
                 "http://test.url/segment12355.ts", // New segment
                 List.of("103.ts", "104.ts"),
+                false,
                 false
         );
 
@@ -220,6 +225,7 @@ class ValidateCheckServiceTest extends BaseTest {
                 "http://test.url/segment" + seq + ".ts",
                 "http://test.url/segment" + (seq + 9) + ".ts",
                 List.of("segment" + (seq+7) + ".ts", "segment" + (seq+8) + ".ts", "segment" + (seq+9) + ".ts"),
+                false,
                 false
         );
     }

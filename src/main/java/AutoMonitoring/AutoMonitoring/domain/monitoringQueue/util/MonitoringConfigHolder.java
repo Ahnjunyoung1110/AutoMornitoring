@@ -25,7 +25,7 @@ public class MonitoringConfigHolder {
         this.reconnectTimeoutMillis = new AtomicInteger(5000);
         this.reconnectRetryDelayMillis = new AtomicInteger(2000);
         this.httpRequestTimeoutMillis = new AtomicInteger(5000);
-        this.autoRefresh = new AtomicBoolean(false);
+        this.autoRefresh = new AtomicBoolean(true);
         this.monitoringEnabled = new AtomicBoolean(true);
     }
 

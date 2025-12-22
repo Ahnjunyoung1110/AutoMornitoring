@@ -53,7 +53,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
         redisService.deleteValues(RedisKeys.state(TRACE_ID, RESOLUTION));
         // 테스트에 사용된 큐들을 비워줍니다.
         while(rabbitTemplate.receive(RabbitNames.Q_WORK) != null);
-        while(rabbitTemplate.receive(RabbitNames.Q_RETRY_DELAY_1S) != null);
+        while(rabbitTemplate.receive(RabbitNames.Q_RETRY_DELAY) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_DEAD) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_WORK_DLX) != null);
         while(rabbitTemplate.receive(RabbitNames.Q_PROGRAM_COMMAND) != null);
@@ -89,7 +89,7 @@ class DelayMonitoringWorkerTest extends BaseTest {
         List<Map<String, Object>> xDeath = new ArrayList<>();
         Map<String, Object> deathHeader = new HashMap<>();
         deathHeader.put("count", 4L); // 재시도 횟수 4번
-        deathHeader.put("queue", RabbitNames.Q_RETRY_DELAY_1S);
+        deathHeader.put("queue", RabbitNames.Q_RETRY_DELAY);
         xDeath.add(deathHeader);
         properties.setHeader("x-death", xDeath);
 

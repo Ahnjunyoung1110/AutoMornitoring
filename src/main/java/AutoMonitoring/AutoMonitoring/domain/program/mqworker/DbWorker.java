@@ -68,7 +68,7 @@ public class DbWorker {
                     Program program = programService.getByTraceId(c.traceId());
                     validationLogService.saveValidationFailure(program, c.failureDTO());
                 } catch (ProgramNotFoundException e) {
-                    log.warn("유효성 검사 로그 저장 중 Program을 찾지 못했습니다. (traceId: {}). 로그 저장을 건너뜕니다.", c.traceId());
+                    log.warn("유효성 검사 로그 저장 중 Program을 찾지 못했습니다. (traceId: {}). 로그 저장을 건너뜁니다.", c.traceId());
                 }
             }
 

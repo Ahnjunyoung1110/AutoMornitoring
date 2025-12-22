@@ -2,11 +2,11 @@ package AutoMonitoring.AutoMonitoring.domain.ffmpeg.mqWorker;
 
 import AutoMonitoring.AutoMonitoring.BaseTest;
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
+import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.DbProbeCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.contract.program.SaveM3u8State;
 import AutoMonitoring.AutoMonitoring.domain.ffmpeg.adapter.MediaProbe;
-import AutoMonitoring.AutoMonitoring.contract.ffmpeg.ProbeCommand;
 import AutoMonitoring.AutoMonitoring.util.redis.adapter.RedisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +15,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.time.Instant;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +48,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
     void handle_probe() {
         // given: 준비
         ProbeCommand command = new ProbeCommand("test-trace-id", "http://test.url", "test-agent");
-        ProbeDTO fakeProbeResult = new ProbeDTO(command.traceId(), Instant.now(), command.masterUrl(), command.userAgent(), "hls", 0.0, 0, SaveM3u8State.WITHOUT_ADSLATE, Collections.emptyList(), Collections.emptyList());
+        ProbeDTO fakeProbeResult = new ProbeDTO(command.traceId(),  command.masterUrl(), "name", "chId", "tp", command.userAgent(), SaveM3u8State.WITHOUT_ADSLATE,"hls", 0.0, 0,  Collections.emptyList(), Collections.emptyList());
         given(mediaProbe.probe(any(ProbeCommand.class))).willReturn(fakeProbeResult);
 
         // when: 실행

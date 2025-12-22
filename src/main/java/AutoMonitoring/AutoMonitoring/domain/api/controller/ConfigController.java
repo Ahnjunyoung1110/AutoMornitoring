@@ -2,7 +2,7 @@ package AutoMonitoring.AutoMonitoring.domain.api.controller;
 
 import AutoMonitoring.AutoMonitoring.config.RabbitNames;
 import AutoMonitoring.AutoMonitoring.contract.program.UpdateSystemConfigCommand;
-import AutoMonitoring.AutoMonitoring.domain.api.client.ConfigClient;
+import AutoMonitoring.AutoMonitoring.domain.api.client.ProgramClient;
 import AutoMonitoring.AutoMonitoring.domain.api.dto.SystemConfigRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class ConfigController {
 
     private final RabbitTemplate rabbitTemplate;
-    private final ConfigClient configClient;
+    private final ProgramClient programClient;
 
     /**
      * 시스템의 기본 설정값을 반환합니다.
@@ -37,7 +37,7 @@ public class ConfigController {
                 5000,   // reconnectTimeoutMillis from MonitoringConfigHolder
                 2000,   // reconnectRetryDelayMillis from MonitoringConfigHolder
                 5000,   // httpRequestTimeoutMillis from MonitoringConfigHolder
-                false,  // autoRefresh from MonitoringConfigHolder
+                true,  // autoRefresh from MonitoringConfigHolder
                 true    // monitoringEnabled from MonitoringConfigHolder
         );
         return ResponseEntity.ok(defaults);
@@ -76,6 +76,6 @@ public class ConfigController {
 
     @GetMapping("/current")
     public ResponseEntity<SystemConfigRequest> getSystemConfigCurrent(){
-        return configClient.getCurrentConfigByFeign();
+        return programClient.getCurrentConfigByFeign();
     }
 }
