@@ -49,7 +49,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
 
                         // Wrap the blocking send call
                         return Mono.fromRunnable(() ->
-                                        rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command)
+                                        rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STORAGE, command)
                                 )
                                 .subscribeOn(Schedulers.boundedElastic())
                                 .thenReturn(result); // Return the result after sending

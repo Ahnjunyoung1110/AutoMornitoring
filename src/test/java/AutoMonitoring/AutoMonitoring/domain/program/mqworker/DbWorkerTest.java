@@ -78,7 +78,7 @@ public class DbWorkerTest extends BaseTest {
         assertThat(savedProgram.getFormat()).isEqualTo("hls");
         assertThat(savedProgram.getVariants()).hasSize(probeDTO.variants().size());
 
-        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE3, 2000);
+        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STARTMONITORING, 2000);
         assertThat(receivedMessage).isNotNull();
         ProgramInfo receivedProgramInfo = objectMapper.readValue(new String(receivedMessage.getBody()), ProgramInfo.class);
         assertThat(receivedProgramInfo.getTraceId()).isEqualTo(traceId);
@@ -126,7 +126,7 @@ public class DbWorkerTest extends BaseTest {
         assertThat(updatedProgram.getDurationSec()).isEqualTo(125.5);
         assertThat(updatedProgram.getVariants()).hasSize(1);
 
-        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE3, 2000);
+        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STARTMONITORING, 2000);
         assertThat(receivedMessage).isNotNull();
         ProgramInfo receivedProgramInfo = objectMapper.readValue(new String(receivedMessage.getBody()), ProgramInfo.class);
         assertThat(receivedProgramInfo.getTraceId()).isEqualTo(traceId);
@@ -237,7 +237,7 @@ public class DbWorkerTest extends BaseTest {
         dbWorker.handleCommand(command);
 
         // then
-        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE1, 2000);
+        Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_FFMPEG, 2000);
         assertThat(receivedMessage).isNotNull();
         RefreshCommand receivedCommand = objectMapper.readValue(new String(receivedMessage.getBody()), RefreshCommand.class);
         assertThat(receivedCommand.traceId()).isEqualTo(traceId);

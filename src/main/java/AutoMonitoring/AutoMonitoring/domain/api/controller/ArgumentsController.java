@@ -1,7 +1,6 @@
 package AutoMonitoring.AutoMonitoring.domain.api.controller;
 
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
-import AutoMonitoring.AutoMonitoring.domain.api.adapter.RecordManifest;
 import AutoMonitoring.AutoMonitoring.domain.api.client.ProgramClient;
 import AutoMonitoring.AutoMonitoring.domain.api.service.ProgramService;
 import jakarta.validation.Valid;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/arguments")
 public class ArgumentsController {
-    private final RecordManifest recordManifest;
     private final ProgramService programService;
     private final ProgramClient programClient;
 

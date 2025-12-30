@@ -299,6 +299,7 @@
     };
 
     const loadingOverlay = document.getElementById('loadingOverlay');
+    let activeApiCount = 0;
 
     function setRandomLoadingVideo() {
         const videos = document.querySelectorAll('.loading-video');
@@ -318,11 +319,18 @@
     }
 
     function showLoading() {
-        setRandomLoadingVideo();
-        if (loadingOverlay) loadingOverlay.classList.remove('d-none');
+        if (activeApiCount === 0) {
+            setRandomLoadingVideo();
+            if (loadingOverlay) loadingOverlay.classList.remove('d-none');
+        }
+        activeApiCount++;
     }
     function hideLoading() {
-        if (loadingOverlay) loadingOverlay.classList.add('d-none');
+        activeApiCount--;
+        if (activeApiCount <= 0) {
+            if (loadingOverlay) loadingOverlay.classList.add('d-none');
+            activeApiCount = 0; // Ensure counter is reset
+        }
     }
 
     async function apiFetch(url, options) {
@@ -391,15 +399,27 @@
             statusModal.show();
 
             try {
-                const informationData = await apiFetch(`/api/information/${item.traceId}`, { method: 'GET' });
-                const informationSaveStateData = await apiFetch(`/arguments/getOptions/${item.traceId}`, { method: 'GET' });
+                const [informationData, informationSaveStateData] = await Promise.all([
+                    apiFetch(`/api/information/${item.traceId}`, { method: 'GET' }),
+                    apiFetch(`/arguments/getOptions/${item.traceId}`, { method: 'GET' }),
+                  ]);
 
-                const currentSaveState = informationSaveStateData || 'NONE';
+                  const currentSaveState = informationSaveStateData || 'NONE';
 
                 // 해상도별 상태 테이블 생성 (bandwidth 포함)
                 let tableRows = '';
-                for (const [resolution, infoList] of Object.entries(informationData)) { // info is now infoList
-                    infoList.forEach((progInfo, index) => { // Iterate through the list of ProgramInformation
+                const sortedResolutions = Object.keys(informationData).sort((a, b) => {
+                    const heightA = parseInt(a.split('x')[1] || '0');
+                    const heightB = parseInt(b.split('x')[1] || '0');
+                    return heightB - heightA; // Sort descending by height (1080p before 720p)
+                });
+
+                for (const resolution of sortedResolutions) {
+                    const infoList = informationData[resolution];
+                    // Sort the variants within this resolution by bandwidth (descending)
+                    infoList.sort((a, b) => b.bandwidth - a.bandwidth);
+
+                    infoList.forEach((progInfo, index) => {
                         const bandwidth = progInfo.bandwidth
                             ? `${(progInfo.bandwidth / 1000000).toFixed(2)} Mbps`
                             : '-';

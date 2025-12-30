@@ -12,6 +12,6 @@ public enum ValidationResult {
     ERROR_STALL_NO_PROGRESS,                    // (LIVE) 진행 없음 N회 누적
     ERROR_SEQ_REWIND,                           // seq가 역행(작아짐)
     ERROR_SEGMENT_GAP_OR_OVERLAP,               // 세그먼트 누락/중복(겹침) 탐지
-    ERROR_DSEQ_REWIND;                           // dseq 역행, 잘 모르겠음.
+    ERROR_DSEQ_REWIND                           // dseq 역행, 잘 모르겠음.
 
 }

@@ -13,6 +13,6 @@ public class ProbePublisher {
 
     public void publish(ProbeCommand cmd){
 
-        rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE1, cmd);
+        rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_FFMPEG, cmd);
     }
 }

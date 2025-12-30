@@ -123,7 +123,7 @@ public class DelayMonitoringWorker {
 
             log.info("재시도 성공. 상태를 다시 MONITORING으로 변경하고 모니터링 큐로 보냅니다.");
             // 재시도 성공 시, 다시 MONITORING 상태로 변경
-            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.MONITORING);
+            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.MONITORING, cmd.bandWidth());
             rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
             rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
         }

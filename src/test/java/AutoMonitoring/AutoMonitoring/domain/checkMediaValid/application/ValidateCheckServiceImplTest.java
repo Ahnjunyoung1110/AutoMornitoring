@@ -64,7 +64,7 @@ public class ValidateCheckServiceImplTest extends BaseTest {
                     assertThat(result).isEqualTo(ValidationResult.ERROR_STALL_NO_PROGRESS);
 
                     // 2. RabbitMQ 큐에 메시지가 발행되었는지 확인
-                    Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STAGE2, 2000);
+                    Message receivedMessage = rabbitTemplate.receive(RabbitNames.Q_STORAGE, 2000);
                     assertThat(receivedMessage).isNotNull();
 
                     // 3. 메시지 내용을 검증

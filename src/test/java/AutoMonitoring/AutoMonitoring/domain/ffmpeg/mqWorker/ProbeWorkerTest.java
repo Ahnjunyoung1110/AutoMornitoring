@@ -40,7 +40,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
         // 테스트 간 독립성을 위해 Redis 데이터 정리
         redisService.deleteValues("test-trace-id");
         // 큐에 메시지가 남아있을 경우 다음 테스트에 영향을 주지 않도록 비워줌
-        rabbitTemplate.receive(RabbitNames.Q_STAGE2);
+        rabbitTemplate.receive(RabbitNames.Q_STORAGE);
     }
 
     @Test
@@ -56,7 +56,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
 
         // then: 검증
         // Q_STAGE2에서 메시지를 실제로 수신하여 내용 검증
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STAGE2, 2000);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STORAGE, 2000);
         assertThat(received).isInstanceOf(DbProbeCommand.class);
         assertThat(((DbProbeCommand) received).traceId()).isEqualTo("test-trace-id");
     }
@@ -77,7 +77,7 @@ class ProbeWorkerTest extends BaseTest { // BaseTest 상속 유지
         assertThat(status).isEqualTo("PROBE_FAILED");
 
         // Q_STAGE2에 메시지가 발행되지 않았는지 확인
-        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STAGE2);
+        Object received = rabbitTemplate.receiveAndConvert(RabbitNames.Q_STORAGE);
         assertThat(received).isNull();
     }
 }

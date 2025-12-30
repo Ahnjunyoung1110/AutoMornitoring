@@ -47,7 +47,7 @@ public class MonitoringWorker {
 
 
     // DB 저장 후 모니터링 시작 메시지를 수신
-    @RabbitListener(queues = RabbitNames.Q_STAGE3)
+    @RabbitListener(queues = RabbitNames.Q_STARTMONITORING)
     void startMessage(ProgramInfo info){
         log.info("모니터링 시작 메시지 수신. TraceId: {}", info.getTraceId());
 
