@@ -32,7 +32,7 @@ class RedisMediaServiceImplTest extends BaseTest {
                 "1234",
                 Instant.now(), Duration.ofMillis(2000),
                 12345L, 67890L, List.of(1,2), 5,
-                "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false
+                "hash-norm-value", "first-uri", "last-uri", List.of("123","456"), false, false
         );
     }
 

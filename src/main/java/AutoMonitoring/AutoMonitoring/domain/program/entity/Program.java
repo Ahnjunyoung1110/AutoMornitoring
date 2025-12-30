@@ -3,6 +3,7 @@ package AutoMonitoring.AutoMonitoring.domain.program.entity;
 import AutoMonitoring.AutoMonitoring.contract.program.ProbeDTO;
 import AutoMonitoring.AutoMonitoring.contract.program.ProgramOptionCommand;
 import AutoMonitoring.AutoMonitoring.contract.program.SaveM3u8State;
+import AutoMonitoring.AutoMonitoring.contract.program.VariantDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -76,18 +77,25 @@ public class Program {
 
 
     /* 도메인 함수 */
-    public static Map<String,String> getResolutionToUrlDomain(Program program){
-        Map<String, String> resolutionToUrlMap = new HashMap<>();
+    public static Map<String,List<VariantDTO>> getResolutionToVarint(Program program){
+        Map<String, List<VariantDTO>> resolutionToVariant = new HashMap<>();
 
         for(VariantInfoEmb variant : program.variants){
-           resolutionToUrlMap.put(variant.getResolution(), variant.getUri());
+            String resolution = variant.getResolution();
+
+            // 해당 해상도의 리스트가 없으면 생성
+            resolutionToVariant.putIfAbsent(resolution, new ArrayList<>());
+
+            // URI 추가
+            resolutionToVariant.get(resolution).add(variant.toDto());
         }
-        return resolutionToUrlMap;
+        return resolutionToVariant;
     }
 
-    public Optional<VariantInfoEmb> findVariantByResolution(String resolution) {
+    public Optional<VariantInfoEmb> findVariantByResolutionAndBandWidth(String resolution, Integer bandWidth) {
         return variants.stream()
                 .filter(v -> resolution.equals(v.getResolution()))
+                .filter(v -> bandWidth != null && bandWidth.equals(v.getBandwidth()))
                 .findFirst();
     }
 

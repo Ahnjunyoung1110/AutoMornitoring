@@ -1,0 +1,37 @@
+# 의존성
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Gradle (캐시/데몬/빌드 산출물)
+.gradle/
+**/.gradle/
+
+# 빌드 결과물
+build/
+dist/
+target/
+*.jar
+*.war
+
+# IDE 설정
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# 로그 및 임시 파일
+*.log
+*.tmp
+*.swp
+
+# OS 관련
+.DS_Store
+Thumbs.db
+
+# ts파일
+files/
+**/files/

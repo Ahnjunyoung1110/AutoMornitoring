@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoMonitoring 제어판</title>
+    <title>HLS Stream Health Monitoring</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -17,6 +17,25 @@
         .sortable-header:hover { background-color: #f0f2f5; }
         .table-hover > tbody > tr:hover > * { background-color: #f0f2f5; }
         .input-group-text { background-color: #f6f8fa; }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 20000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(2px);
+        }
+
+        .loading-card {
+            background: #fff;
+            border: 1px solid #d0d7de;
+            border-radius: 12px;
+            padding: 16px 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -24,7 +43,7 @@
     <header class="pb-3 mb-4 border-bottom">
         <a href="/" class="d-flex align-items-center text-body text-decoration-none">
             <img src="/favicon.ico" class="me-2" style="width: 90px; height: 90px;" alt="icon">
-            <span class="fs-4">AutoMonitoring 제어판</span>
+            <span class="fs-4">HSHM 제어판</span>
             <img src="/favicon.ico" class="me-2" style="width: 90px; height: 90px;" alt="icon">
         </a>
     </header>
@@ -110,7 +129,7 @@
             </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header"><i class="bi bi-plus-circle me-2"></i>신규 모니터링 시작</div>
                 <div class="card-body">
@@ -129,31 +148,7 @@
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header"><i class="bi bi-sliders me-2"></i>저장 옵션 설정</div>
-                <div class="card-body">
-                    <form id="form-set-options">
-                        <div class="mb-3">
-                            <label for="options-traceId" class="form-label">Trace ID</label>
-                            <input type="text" class="form-control" id="options-traceId" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="options-state" class="form-label">SaveM3u8State</label>
-                            <select id="options-state" class="form-select">
-                                <option>NONE</option>
-                                <option>WITHOUT_ADSLATE</option>
-                                <option>WITH_ADSLATE</option>
-                                <option>ALWAYS</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">옵션 설정</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header"><i class="bi bi-lightning-charge me-2"></i>채널 및 시스템 작업</div>
                 <div class="card-body">
@@ -174,7 +169,7 @@
             </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header"><i class="bi bi-gear-fill me-2"></i>전체 시스템 설정</div>
                 <div class="card-body">
@@ -270,6 +265,23 @@
     </div>
 </div>
 
+<div id="loadingOverlay" class="loading-overlay d-none" aria-busy="true" aria-live="polite">
+    <div class="loading-card">
+        <div id="video-container">
+            <video class="loading-video" autoplay loop muted playsinline width="160" height="160" preload="auto">
+                <source src="/bingulbingul.mp4" type="video/mp4">
+            </video>
+            <video class="loading-video" autoplay loop muted playsinline width="160" height="160" preload="auto" style="display: none;">
+                <source src="/padakpadak.mp4" type="video/mp4">
+            </video>
+            <video class="loading-video" autoplay loop muted playsinline width="160" height="160" preload="auto" style="display: none;">
+                <source src="/bingururu.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="small text-muted mt-2">요청 처리 중…</div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const log = (message, data) => {
@@ -286,7 +298,44 @@
         logBox.scrollTop = logBox.scrollHeight;
     };
 
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    let activeApiCount = 0;
+
+    function setRandomLoadingVideo() {
+        const videos = document.querySelectorAll('.loading-video');
+        if (!videos.length) return;
+
+        // 모든 비디오 숨김
+        videos.forEach(v => v.style.display = 'none');
+
+        // 랜덤 선택
+        const randomIndex = Math.floor(Math.random() * videos.length);
+        const selectedVideo = videos[randomIndex];
+
+        // 선택된 비디오만 표시 및 재생
+        selectedVideo.style.display = 'block';
+        selectedVideo.currentTime = 0; // 처음부터 재생
+        selectedVideo.play();
+    }
+
+    function showLoading() {
+        if (activeApiCount === 0) {
+            setRandomLoadingVideo();
+            if (loadingOverlay) loadingOverlay.classList.remove('d-none');
+        }
+        activeApiCount++;
+    }
+    function hideLoading() {
+        activeApiCount--;
+        if (activeApiCount <= 0) {
+            if (loadingOverlay) loadingOverlay.classList.add('d-none');
+            activeApiCount = 0; // Ensure counter is reset
+        }
+    }
+
     async function apiFetch(url, options) {
+        showLoading();
+
         log(`요청: ${options.method || 'GET'} ${url}`, options.body ? JSON.parse(options.body) : undefined);
         try {
             const response = await fetch(url, options);
@@ -298,6 +347,8 @@
         } catch (error) {
             log(`응답 실패: ${error.message}`);
             throw error;
+        } finally {
+        hideLoading(); // ✅ 요청 종료(성공/실패 모두)
         }
     }
 
@@ -342,26 +393,99 @@
                 <td class="p-3 align-middle">${item.tp || '-'}</td>
                 <td class="p-3 align-middle text-end"><i class="bi bi-chevron-right"></i></td>
             `;
-            tr.addEventListener('click', async () => {
-                statusModalLabel.textContent = `상세 정보: ${item.traceId}`;
-                statusModalBody.innerHTML = '<div class="d-flex justify-content-center p-5"><div class="spinner-border"></div></div>';
-                statusModal.show();
-                try {
-                    const statusData = await apiFetch(`/api/status/${item.traceId}`, { method: 'GET' });
-                    statusModalBody.innerHTML = `
-                        <dl class="row mb-0">
-                            <dt class="col-sm-3">Master URL</dt><dd class="col-sm-9"><small class="text-break">${item.masterManifestUrl || '-'}</small></dd>
-                        </dl>
-                        <hr class="my-3">
-                        <h6><i class="bi bi-hdd-stack"></i> 해상도별 상태</h6>
-                        <table class="table table-sm table-bordered">
-                            <thead class="table-light"><tr><th>Resolution</th><th>Status</th></tr></thead>
-                            <tbody>${Object.entries(statusData).map(([res, status]) => `<tr><td>${res}</td><td>${status}</td></tr>`).join('')}</tbody>
-                        </table>`;
-                } catch (e) {
-                    statusModalBody.innerHTML = `<div class="alert alert-danger">상태 정보를 불러오는데 실패했습니다: ${e.message}</div>`;
+        tr.addEventListener('click', async () => {
+            statusModalLabel.textContent = `상세 정보: ${item.traceId}`;
+            statusModalBody.innerHTML = '<div class="d-flex justify-content-center p-5"><div class="spinner-border"></div></div>';
+            statusModal.show();
+
+            try {
+                const [informationData, informationSaveStateData] = await Promise.all([
+                    apiFetch(`/api/information/${item.traceId}`, { method: 'GET' }),
+                    apiFetch(`/arguments/getOptions/${item.traceId}`, { method: 'GET' }),
+                  ]);
+
+                  const currentSaveState = informationSaveStateData || 'NONE';
+
+                // 해상도별 상태 테이블 생성 (bandwidth 포함)
+                let tableRows = '';
+                const sortedResolutions = Object.keys(informationData).sort((a, b) => {
+                    const heightA = parseInt(a.split('x')[1] || '0');
+                    const heightB = parseInt(b.split('x')[1] || '0');
+                    return heightB - heightA; // Sort descending by height (1080p before 720p)
+                });
+
+                for (const resolution of sortedResolutions) {
+                    const infoList = informationData[resolution];
+                    // Sort the variants within this resolution by bandwidth (descending)
+                    infoList.sort((a, b) => b.bandwidth - a.bandwidth);
+
+                    infoList.forEach((progInfo, index) => {
+                        const bandwidth = progInfo.bandwidth
+                            ? `${(progInfo.bandwidth / 1000000).toFixed(2)} Mbps`
+                            : '-';
+
+                        tableRows += `
+                            <tr>
+                                <td>${index === 0 ? resolution : ''}</td>
+                                <td>${progInfo.status}</td>
+                                <td>${bandwidth}</td>
+                                <td><a href="${progInfo.mediaUrl}" target="_blank" rel="noopener noreferrer" class="text-break">${progInfo.mediaUrl}</a></td>
+                            </tr>
+                        `;
+                    });
                 }
-            });
+
+                statusModalBody.innerHTML = `
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Master URL</dt>
+                        <dd class="col-sm-9"><small class="text-break">${item.masterManifestUrl || '-'}</small></dd>
+                    </dl>
+                    <hr class="my-3">
+                    <h6><i class="bi bi-hdd-stack"></i> 해상도별 상태</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Resolution</th>
+                                <th>Status</th>
+                                <th>Bandwidth</th>
+                                <th>Media URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                    <hr class="my-3">
+                    <h6><i class="bi bi-save me-2"></i>M3U8 저장 옵션</h6>
+                    <form id="form-set-options">
+                        <div class="input-group">
+                            <select class="form-select" id="options-state">
+                                <option value="NONE">저장 안함</option>
+                                <option value="WITHOUT_ADSLATE">광고 나올 시 저장 (Adslate 제외)</option>
+                                <option value="WITH_ADSLATE">광고 나올 시 저장 (Adslate 포함)</option>
+                                <option value="ALWAYS">항상 저장</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">옵션 저장</button>
+                        </div>
+                    </form>
+                `;
+
+                const selectElement = statusModalBody.querySelector('#options-state');
+                selectElement.value = currentSaveState;
+
+                statusModalBody.querySelector('#form-set-options').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const saveM3u8State = statusModalBody.querySelector('#options-state').value;
+                    await apiFetch('/arguments/setOptions', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ traceId: item.traceId, saveM3u8State }),
+                    });
+                    statusModal.hide();
+                });
+
+            } catch (e) {
+                statusModalBody.innerHTML = `<div class="alert alert-danger">상태 정보를 불러오는데 실패했습니다: ${e.message}</div>`;
+            }
+        });
             monitoringListBody.appendChild(tr);
         });
     }
@@ -493,16 +617,6 @@
         fetchMonitoringPrograms();
     });
 
-    document.getElementById('form-set-options').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const traceId = document.getElementById('options-traceId').value;
-        const saveM3u8State = document.getElementById('options-state').value;
-        await apiFetch('/arguments/setOptions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ traceId, saveM3u8State }),
-        });
-    });
 
     document.getElementById('form-config').addEventListener('submit', async (e) => {
         e.preventDefault();

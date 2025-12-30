@@ -75,71 +75,81 @@ public class MediaProbeImpl implements MediaProbe {
             }
             // '[', ']' 는 인코딩 되면 요청이 안되므로 재 수정
             String escapedUrl = url.replace( "%5B","[").replace( "%5D", "]");
-
-            // 1) ffprobe 실행
-            String json = run(
-                    ffprobePath,
-                    "-v","error",
-                    "-show_error",
-                    "-print_format","json",           // = -of json
-                    "-show_format","-show_streams",
-                    "-f","hls",                       // ★ HLS demuxer 강제
-                    "-allowed_extensions","ALL",
-                    "-rw_timeout", "10000000",                 // 10초
-                    "-max_reload", "1",         // 플레이리스트를 1번만 리로드하고 포기
-                    "-extension_picky", "0",
-                    "-protocol_whitelist","file,http,https,tcp,tls,crypto", // ★ 내부 fetch 허용
-                    "-i" , escapedUrl
-            );
-
-            // 2) JSON 파싱
-            JsonNode root    = om.readTree(json);
-            JsonNode fmt     = root.path("format");
-            JsonNode streams = root.path("streams");
-
-            String formatName     = textOrNull(fmt, "format_name");           // ex) "hls"
-            Double durationSec    = parseDouble(textOrNull(fmt, "duration"));  // 라이브면 null일 수 있음
-            Integer overallBitrate= parseInt(textOrNull(fmt, "bit_rate"));     // bps, 없을 수 있음
-
-            // 3) streams → List<StreamDTO>
+            String formatName     = "";           // ex) "hls"
+            Double durationSec    = null;  // 라이브면 null일 수 있음
+            Integer overallBitrate= null;     // bps, 없을 수 있음
             List<StreamDTO> streamDTOs = new ArrayList<>();
-            if (streams.isArray()) {
-                for (JsonNode s : streams) {
-                    String type = s.path("codec_type").asText(null);
-                    String codec= s.path("codec_name").asText(null);
 
-                    if ("video".equals(type)) {
-                        Integer width  = numberOrNull(s, "width");
-                        Integer height = numberOrNull(s, "height");
-                        // r_frame_rate(예: "30/1") 또는 avg_frame_rate
-                        Double fps = parseRatio(s.path("r_frame_rate").asText(null));
-                        if (fps == null) fps = parseRatio(s.path("avg_frame_rate").asText(null));
+            try{
+                // 1) ffprobe 실행
+                String json = run(
+                        ffprobePath,
+                        "-v","error",
+                        "-show_error",
+                        "-print_format","json",           // = -of json
+                        "-show_format","-show_streams",
+                        "-f","hls",                       // ★ HLS demuxer 강제
+                        "-allowed_extensions","ALL",
+                        "-rw_timeout", "10000000",                 // 10초
+                        "-max_reload", "1",         // 플레이리스트를 1번만 리로드하고 포기
+                        "-extension_picky", "0",
+                        "-protocol_whitelist","file,http,https,tcp,tls,crypto", // ★ 내부 fetch 허용
+                        "-i" , escapedUrl
+                );
 
-                        StreamDTO dto = StreamDTO.builder()
-                                .type("video")
-                                .codec(codec)
-                                .width(width)
-                                .height(height)
-                                .fps(fps)
-                                .build();
-                        streamDTOs.add(dto);
-                    } else if ("audio".equals(type)) {
-                        Integer channels = numberOrNull(s, "channels");
-                        String lang = null;
-                        if (s.has("tags")) lang = s.path("tags").path("language").asText(null);
+                // 2) JSON 파싱
+                JsonNode root    = om.readTree(json);
+                JsonNode fmt     = root.path("format");
+                JsonNode streams = root.path("streams");
 
-                        StreamDTO dto = StreamDTO.builder()
-                                .type("audio")
-                                .codec(codec)
-                                .channels(channels)
-                                .lang(lang)
-                                .build();
-                        streamDTOs.add(dto);
-                    } else {
-                        // 다른 타입(자막 등)은 지금은 무시. 필요하면 확장
+                formatName     = textOrNull(fmt, "format_name");           // ex) "hls"
+                durationSec    = parseDouble(textOrNull(fmt, "duration"));  // 라이브면 null일 수 있음
+                overallBitrate= parseInt(textOrNull(fmt, "bit_rate"));     // bps, 없을 수 있음
+
+                // 3) streams → List<StreamDTO>
+
+
+                if (streams.isArray()) {
+                    for (JsonNode s : streams) {
+                        String type = s.path("codec_type").asText(null);
+                        String codec= s.path("codec_name").asText(null);
+
+                        if ("video".equals(type)) {
+                            Integer width  = numberOrNull(s, "width");
+                            Integer height = numberOrNull(s, "height");
+                            // r_frame_rate(예: "30/1") 또는 avg_frame_rate
+                            Double fps = parseRatio(s.path("r_frame_rate").asText(null));
+                            if (fps == null) fps = parseRatio(s.path("avg_frame_rate").asText(null));
+
+                            StreamDTO dto = StreamDTO.builder()
+                                    .type("video")
+                                    .codec(codec)
+                                    .width(width)
+                                    .height(height)
+                                    .fps(fps)
+                                    .build();
+                            streamDTOs.add(dto);
+                        } else if ("audio".equals(type)) {
+                            Integer channels = numberOrNull(s, "channels");
+                            String lang = null;
+                            if (s.has("tags")) lang = s.path("tags").path("language").asText(null);
+
+                            StreamDTO dto = StreamDTO.builder()
+                                    .type("audio")
+                                    .codec(codec)
+                                    .channels(channels)
+                                    .lang(lang)
+                                    .build();
+                            streamDTOs.add(dto);
+                        } else {
+                            // 다른 타입(자막 등)은 지금은 무시. 필요하면 확장
+                        }
                     }
                 }
+            } catch (Exception e){
+                log.warn("ffprobe failed. continue without streams. url={}", escapedUrl, e);
             }
+
 
             // 4) 마스터 m3u8 파싱 → variants
             List<VariantDTO> variants = parseMasterM3u8(escapedUrl);
@@ -260,10 +270,20 @@ public class MediaProbeImpl implements MediaProbe {
             String cleaned = masterUrl.replace("\r","").replace("\n","").trim();
             String[] parts = cleaned.split("\\?");
             String baseUrl = parts[0];
-            String queryParam = parts[1];
-            String encodedQueryParams = UriEncoder.encode(queryParam);  // 인코딩된 쿼리 파라미터
-            String finalUrl = baseUrl + "?" + encodedQueryParams;
+            String finalUrl;
+
+            // param이 있는 경우만
+            if (parts.length == 2) {
+                String queryParam = parts[1];
+                String encodedQueryParams = UriEncoder.encode(queryParam);  // 인코딩된 쿼리 파라미터
+                finalUrl = baseUrl + "?" + encodedQueryParams;
+            } else {
+                finalUrl = baseUrl;
+            }
+
+
             log.info("함수가 실행되었습니다2.");
+
 
 
 
@@ -310,6 +330,23 @@ public class MediaProbeImpl implements MediaProbe {
 
                 String audioGroup = kv.getOrDefault("AUDIO", null);
 
+
+                // 절대 url이 아닌경우 반영
+                URI media = URI.create(mediaUri);
+                URI finalURL = URI.create(finalUrl);
+                if (!media.isAbsolute()) {
+                    // scheme-relative: //cdn.example.com/a.m3u8
+                    if (mediaUri.startsWith("//")) {
+                        String scheme = finalURL.getScheme(); // https
+                        if (scheme == null) {
+                            throw new IllegalArgumentException("Master URL scheme is null: " + finalUrl);
+                        }
+                        mediaUri = scheme + ":" + mediaUri;
+                    } else {
+                        // 일반 상대경로: CTSNewsQT_1.m3u8, sub/1.m3u8, ../1.m3u8, /root/1.m3u8
+                        mediaUri = finalURL.resolve(mediaUri).toString();
+                    }
+                }
 
                 out.add(new VariantDTO(resolution, bandwidth, mediaUri, audioGroup));
             }

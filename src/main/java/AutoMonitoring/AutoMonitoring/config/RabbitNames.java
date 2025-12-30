@@ -10,12 +10,12 @@ public final class RabbitNames {
     public static final String EX_DEAD_LETTER   = "ex.dead-letter";
 
     // Provisioning Queues & R-Keys
-    public static final String Q_STAGE1         = "queue.stage1";
-    public static final String Q_STAGE2         = "queue.stage2";
-    public static final String Q_STAGE3         = "queue.stage3";
-    public static final String RK_STAGE1        = "route.stage1";
-    public static final String RK_STAGE2        = "route.stage2";
-    public static final String RK_STAGE3        = "route.stage3";
+    public static final String Q_FFMPEG = "queue.ffmpeg";
+    public static final String Q_STORAGE = "queue.storage";
+    public static final String Q_STARTMONITORING = "queue.startMonitoring";
+    public static final String RK_FFMPEG = "route.ffmpeg";
+    public static final String RK_STORAGE = "route.storage";
+    public static final String RK_STARTMONITORING = "route.startMonitoring";
 
     public static final String EX_VALID = "ex.valid";
 
@@ -59,8 +59,8 @@ public final class RabbitNames {
     public static final String RK_DELAY_4S      = "route.delay.4s";
 
     // Delay Queue & R-Key (for retry mechanism)
-    public static final String Q_RETRY_DELAY_1S = "ttl.retry.delay.1s";
-    public static final String RK_RETRY_DELAY_1S = "route.retry.delay.1s";
+    public static final String Q_RETRY_DELAY = "ttl.retry.delay";
+    public static final String RK_RETRY_DELAY = "route.retry.delay";
 
     // Monitoring Queues & R-Keys
     public static final String Q_WORK           = "working.queue.stage1";

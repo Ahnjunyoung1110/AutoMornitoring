@@ -33,13 +33,13 @@ public class MonitoringServiceImpl implements MonitoringService {
     public void startMornitoring(StartMonitoringDTO dto) {
 
         // queue 에 넣을 dto 생성
-        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(), 0, Instant.now(), dto.traceId(), dto.epoch());
+        CheckMediaManifestCmd cmd = new CheckMediaManifestCmd(dto.manifestUrl(), dto.resolution( ),dto.userAgent(),dto.bandWidth(), 0, Instant.now(), dto.traceId(), dto.epoch());
 
         boolean isValidUrl = urlValidateCheck.check(dto.manifestUrl());
         if(!isValidUrl){
             log.info("URL이 유효하지 않습니다." + dto.manifestUrl());
 
-            ProgramStatusCommand statusCmd = new ProgramStatusCommand(dto.traceId(), dto.resolution(), ResolutionStatus.WRONG_URL);
+            ProgramStatusCommand statusCmd = new ProgramStatusCommand(dto.traceId(), dto.resolution(), ResolutionStatus.WRONG_URL, dto.bandWidth());
             rabit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, statusCmd);
             throw new AmqpRejectAndDontRequeueException("Wrong sub Url %s".formatted(cmd.mediaUrl()));
         }

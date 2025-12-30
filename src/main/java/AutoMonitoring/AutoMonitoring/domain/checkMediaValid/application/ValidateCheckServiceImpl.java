@@ -49,7 +49,7 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
 
                         // Wrap the blocking send call
                         return Mono.fromRunnable(() ->
-                                        rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, command)
+                                        rabbitTemplate.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STORAGE, command)
                                 )
                                 .subscribeOn(Schedulers.boundedElastic())
                                 .thenReturn(result); // Return the result after sending
@@ -120,8 +120,8 @@ public class ValidateCheckServiceImpl implements ValidateCheckService {
             }
         }
 
-        // 2.2 7 이상 늘어난 경우
-        if (seqDifference >= 7) {
+        // 2.2 광고 구간이 아님에도 7이상 늘어난 경우
+        if (seqDifference >= 7 && curr.discontinuityPos().isEmpty()) {
             return ValidationResult.WARN_SEQUENCE_CHANGE_TOO_FAR;
         }
 

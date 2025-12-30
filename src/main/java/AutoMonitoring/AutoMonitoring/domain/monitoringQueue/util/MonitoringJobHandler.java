@@ -75,7 +75,7 @@ public class MonitoringJobHandler {
                                                    .then(Mono.error(e));
                                     });
                             }
-                            log.warn("가져오기에 실패했습니다. {}", e.toString());
+                            log.error("가져오기에 실패했습니다.", e);
                             return Mono.error(e);
                         });
 
@@ -135,7 +135,7 @@ public class MonitoringJobHandler {
         }
 
         log.info("{}ms 후 다음 작업을 스케줄링합니다.", delay);
-        newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(), 0, nextDue, cmd.traceId(), cmd.epoch());
+        newCmd = new CheckMediaManifestCmd(cmd.mediaUrl(), cmd.resolution(), cmd.userAgent(),cmd.bandWidth(), 0, nextDue, cmd.traceId(), cmd.epoch());
         String delayRoutingKey = getDelayRoutingKey(delay);
 
         // EX_DELAY Exchange로 메시지를 보내, TTL이 설정된 큐로 들어가게 함

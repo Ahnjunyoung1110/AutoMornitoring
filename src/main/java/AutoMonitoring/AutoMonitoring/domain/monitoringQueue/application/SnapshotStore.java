@@ -32,7 +32,6 @@ public class SnapshotStore {
     ) throws IOException {
 
         SaveM3u8State state = loadState(traceId); // redis or default
-
         if (!shouldSnapshot(state, isDiscontinuity, url)) {
             return Path.of(""); // 아무것도 안 함
         }
@@ -65,8 +64,14 @@ public class SnapshotStore {
             
             // 에드슬레이트 아닌경우만 저장
             case WITHOUT_ADSLATE-> {
-                if (isDiscontinuity &&
-                        !url.startsWith("https://cdn") && !url.startsWith("http://cdn") && !url.startsWith("https://cc-")){
+                String[] parts = url.split(java.util.regex.Pattern.quote("______"), 2);
+                String a = parts[0];
+                String b = parts.length > 1 ? parts[1] : "";
+                if (isDiscontinuity
+                        &&!a.startsWith("https://cdn") && !a.startsWith("http://cdn") && !a.startsWith("https://cc-") && !a.contains("cloudfront.net")
+                        &&!b.isEmpty()
+                        &&!b.startsWith("https://cdn") && !b.startsWith("http://cdn") && !b.startsWith("https://cc-")
+                ){
                     return true;
                 }
                 else{

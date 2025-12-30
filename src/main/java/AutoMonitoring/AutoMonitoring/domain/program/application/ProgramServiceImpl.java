@@ -20,10 +20,10 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -97,7 +97,7 @@ public class ProgramServiceImpl implements ProgramService {
         Program program = programRepo.findByTraceId(c.traceId())
                 .orElseThrow(() -> new ProgramNotFoundException("프로그램이 존재하지 않습니다."));
 
-        VariantInfoEmb variantInfoEmb = program.findVariantByResolution(c.resolution())
+        VariantInfoEmb variantInfoEmb = program.findVariantByResolutionAndBandWidth(c.resolution(), c.bandWidth())
                 .orElseThrow(() -> new ProgramNotFoundException("해당 resolution의 프로그램이 존재하지 않습니다."));
 
         variantInfoEmb.changeStatus(c.status());
@@ -105,18 +105,25 @@ public class ProgramServiceImpl implements ProgramService {
     }
 
     @Override
-    public Map<String, String> getStatuesByTraceId(String traceId) {
+    public Map<String, List<ProgramInformation>> getInformationByTraceId(String traceId) {
         List<VariantInfoEmb> variants = programRepo.findVarient(traceId).orElseThrow(
                 () -> new ProgramNotFoundException("프로그램이 존재하지 않습니다.")
         );
 
-        Map<String, String> statusMap = new HashMap<>();
-        for (VariantInfoEmb emb : variants){
-            statusMap.put(emb.getResolution(), emb.getStatus().name());
-        }
-
-        log.info("접근 완료");
-        return statusMap;
+        return variants.stream()
+                .collect(Collectors.groupingBy(
+                        VariantInfoEmb::getResolution,
+                        Collectors.mapping(
+                                emb -> new ProgramInformation(
+                                        emb.getStatus(),
+                                        emb.getUri(),
+                                        List.of(emb.getUri()),
+                                        emb.getBandwidth(),
+                                        List.of(emb.getBandwidth())
+                                ),
+                                Collectors.toList()
+                        )
+                ));
     }
 
     @Override

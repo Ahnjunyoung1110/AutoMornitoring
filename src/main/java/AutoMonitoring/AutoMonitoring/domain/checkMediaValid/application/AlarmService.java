@@ -89,9 +89,10 @@ public final class AlarmService {
                 .doOnError(e -> log.error("Slack webhook failed", e))
                 .then().subscribe();
 
-        // 알람 발송 후 쿨다운 설정
+        // 알람 발송 후 쿨다운 설정 및 초기화
         redisService.setValues(cooldownKey, "1");
         redisService.expire(cooldownKey, Duration.ofSeconds(configHolder.getAlarmCooldownSeconds().get()));
+        redisService.expire(countKey, Duration.ZERO);
     }
 
 

@@ -3,7 +3,6 @@ package AutoMonitoring.AutoMonitoring.contract.checkMediaValid;
 
 public enum ValidationResult {
     OK_FINE,                                    // 정상적인 상태
-    WARN_NO_CHANGE,                             // (LIVE) 진행 없음 최초
     WARN_SEQUENCE_CHANGE_TOO_FAR,
     WARN_SEQ_ROLLED_SEGMENTS_IDENTICAL,         // seq는 증가했는데 창(세그먼트 집합)은 동일
     WARN_SEGMENTS_CHANGED_SEQ_STUCK,            // 세그먼트는 바뀌었는데 seq는 그대로
@@ -13,6 +12,6 @@ public enum ValidationResult {
     ERROR_STALL_NO_PROGRESS,                    // (LIVE) 진행 없음 N회 누적
     ERROR_SEQ_REWIND,                           // seq가 역행(작아짐)
     ERROR_SEGMENT_GAP_OR_OVERLAP,               // 세그먼트 누락/중복(겹침) 탐지
-    ERROR_DSEQ_REWIND;                           // dseq 역행, 잘 모르겠음.
+    ERROR_DSEQ_REWIND                           // dseq 역행, 잘 모르겠음.
 
 }

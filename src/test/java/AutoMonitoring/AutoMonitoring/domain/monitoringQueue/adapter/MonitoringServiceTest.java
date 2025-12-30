@@ -52,7 +52,7 @@ class MonitoringServiceTest extends BaseTest {
     @DisplayName("유효한 URL로 모니터링 시작 시, Redis에 상태를 기록하고 지연 큐로 메시지를 보낸다.")
     void startMonitoring_WithValidUrl_ShouldRecordStateAndSendMessage() {
         // given
-        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", URLTestConfig.SUCCESS_MANIFEST_URL, "1080p", "TestAgent", 0L);
+        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", URLTestConfig.SUCCESS_MANIFEST_URL, "1080p", 1234,"TestAgent", 0L);
         when(urlValidateCheck.check(anyString())).thenReturn(true);
 
 
@@ -76,7 +76,7 @@ class MonitoringServiceTest extends BaseTest {
     @DisplayName("유효하지 않은 URL로 모니터링 시작 시, Redis에 상태를 기록하고 예외를 발생시킨다.")
     void startMonitoring_WithInvalidUrl_ShouldRecordStateAndThrowException() {
         // given
-        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", "invalid-url", "1080p", "TestAgent", 0L);
+        StartMonitoringDTO dto = new StartMonitoringDTO("test-trace-id", "invalid-url", "1080p",123, "TestAgent", 0L);
         when(urlValidateCheck.check(anyString())).thenReturn(false);
 
         // when & then

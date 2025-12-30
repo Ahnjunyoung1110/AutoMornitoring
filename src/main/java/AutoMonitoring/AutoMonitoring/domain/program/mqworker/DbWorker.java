@@ -32,7 +32,7 @@ public class DbWorker {
     // DB에 대한 조회 또는 변경
     @RabbitListener(
             id = "DB_CHANGE",
-            queues = RabbitNames.Q_STAGE2,
+            queues = RabbitNames.Q_STORAGE,
             errorHandler = "globalRabbitErrorHandler")
     public Object handle(DbCommand cmd){
 
@@ -47,7 +47,7 @@ public class DbWorker {
 
                 // 이후 모니터링을 시행
                 ProgramInfo stream = ProgramInfo.getProgramInfo(savedProgram);
-                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE3, stream);
+                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STARTMONITORING, stream);
             }
 
             // submenifest 갱신
@@ -59,7 +59,7 @@ public class DbWorker {
 
                 // 이후 모니터링을 시행
                 ProgramInfo stream = ProgramInfo.getProgramInfo(savedProgram);
-                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE3, stream);
+                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STARTMONITORING, stream);
             }
 
             // M3U8 유효성 검사 실패 로그 저장
@@ -68,7 +68,7 @@ public class DbWorker {
                     Program program = programService.getByTraceId(c.traceId());
                     validationLogService.saveValidationFailure(program, c.failureDTO());
                 } catch (ProgramNotFoundException e) {
-                    log.warn("유효성 검사 로그 저장 중 Program을 찾지 못했습니다. (traceId: {}). 로그 저장을 건너뜕니다.", c.traceId());
+                    log.warn("유효성 검사 로그 저장 중 Program을 찾지 못했습니다. (traceId: {}). 로그 저장을 건너뜁니다.", c.traceId());
                 }
             }
 
@@ -105,7 +105,7 @@ public class DbWorker {
             case ProgramRefreshRequestCommand c -> {
                 Program findedProgram = programService.getByTraceId(c.traceId());
                 RefreshCommand probeCommand = new RefreshCommand(findedProgram.getTraceId(), findedProgram.getMasterManifestUrl(), findedProgram.getUserAgent());
-                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE1, probeCommand);
+                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_FFMPEG, probeCommand);
             }
 
             // ProgramStatus 변경

@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -86,26 +87,20 @@ public class GetMediaServiceImpl implements GetMediaService {
                 .header("User-Agent", userAgent != null ? userAgent : DEFAULT_USER_AGENT)
                 .exchangeToMono(clientResponse -> clientResponse
                         .toEntity(byte[].class)
-                        .flatMap(entity -> {
-                            String contentEncoding = entity.getHeaders().getFirst("Content-Encoding");
+                        .flatMap(entity -> Mono.fromCallable(() -> {
+                                    String contentEncoding = entity.getHeaders().getFirst("Content-Encoding");
+                                    // 동기 쪽과 동일한 검증 로직 호출
+                                    validateReactiveResponse(
+                                            entity.getStatusCode().value(),
+                                            entity.getHeaders(),
+                                            entity.getBody(),
+                                            contentEncoding,
+                                            traceId
+                                    );
 
-                            try {
-                                // 동기 쪽과 동일한 검증 로직 호출
-                                validateReactiveResponse(
-                                        entity.getStatusCode().value(),
-                                        entity.getHeaders(),
-                                        entity.getBody(),
-                                        contentEncoding,
-                                        traceId
-                                );
-                                String decoded = decodeBody(entity.getBody(), contentEncoding);
-                                return Mono.just(decoded);
-                            } catch (SessionExpiredException e) {
-                                return Mono.error(e);
-                            } catch (IOException e) {
-                                return Mono.error(new UncheckedIOException(e));
-                            }
-                        })
+                                    return decodeBody(entity.getBody(), contentEncoding);
+                                }).subscribeOn(Schedulers.boundedElastic())
+                        )
                 );
     }
 

@@ -52,6 +52,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
         int disUrl = 111;
 
         String[] lines = m.split("\n");
+        boolean isCue = false;
         for (int i = 0; i < lines.length; i++){
             String line = lines[i].trim();
             if(line.isEmpty()) continue;
@@ -66,7 +67,7 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 continue;
             }
 
-            // EXT-X-DISCONTINUITY 가 있는경우
+            // EXT-X-DISCONTINUITY 또는 EXT-X-CUE가 있는경우
             if(line.equals("#EXT-X-DISCONTINUITY")){
                 discontinuityPos.add(uris.size());
                 disUrl = Math.min(disUrl,i +2);
@@ -75,6 +76,11 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
                 continue;
             }
 
+
+            // Cue 관련 태그가 있는경우 저장
+            if(line.startsWith("#EXT-X-CUE-IN") || line.startsWith("#EXT-X-CUE-OUT")){
+                isCue = true;
+            }
             if (line.startsWith("#")) {
                 // 다른 태그는 무시
                 continue;
@@ -97,10 +103,19 @@ public class ParseMediaManifestImpl implements ParseMediaManifest {
             Path baseM3u8Url = snapshotStorePath.m3u8Base();
             String url = "";
             if(disUrl != 111){
-                url = lines[disUrl].trim();
+                url = uris.get(discontinuityPos.getFirst());
+                int idx = discontinuityPos.getFirst() + 1;
+
+                if (idx >= 0 && idx < uris.size()) {
+                    url = url.concat("______" + uris.get(idx));}
             }
             Path savedPath = snapshotStore.trySnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m, !discontinuityPos.isEmpty());
             log.info("%s .".formatted(savedPath));
+
+            if(isCue){
+                savedPath = snapshotStore.trySnapshot(baseM3u8Url, url ,traceId, resolution, String.valueOf(seq), m, true);
+                log.info("%s .".formatted(savedPath));
+            }
         } catch (IOException e){
             throw new RuntimeException(
                     "%s Discontinuity가 등장한 .m3u8을 저장하는데 실패하였습니다.".formatted(traceId), e);

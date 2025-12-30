@@ -52,20 +52,20 @@ public class DelayMonitoringWorker {
 
 
         // x-death 헤더에서 재시도 횟수를 계산 (0-indexed 이므로 0부터 시작)
-        int attempt = deathCountForQueue(m, RabbitNames.Q_RETRY_DELAY_1S);
+        int attempt = deathCountForQueue(m, RabbitNames.Q_RETRY_DELAY);
         ProgramStatusCommand programStatusCommand;
         // 최대 재시도 횟수 확인 (0,1,2,3 -> 4번 재시도 후 이번이 5번째 시도)
         if( attempt >= monitoringConfigHolder.getReconnectThreshold().get()){
             log.warn("최대 재시도 횟수({}회)를 초과하여 최종 실패 처리합니다. TraceId: {}, Resolution: {}", monitoringConfigHolder.getReconnectThreshold(), cmd.traceId(), cmd.resolution());
 
             if (monitoringConfigHolder.getAutoRefresh().get()) {
-                log.info("Auto-refresh is enabled. Triggering refresh for traceId: {}", cmd.traceId());
+                log.info("자동갱신이 활성화 되어있습니다. TraceId: {}", cmd.traceId());
                 ProgramRefreshRequestCommand refreshCmd = new ProgramRefreshRequestCommand(cmd.traceId());
                 rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, refreshCmd);
             }
             
             // 1. 최종 FAILED 상태 기록
-            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.FAILED);
+            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.FAILED, cmd.bandWidth());
             rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
             throw new AmqpRejectAndDontRequeueException("%d회 이상 재시도 실패 %s, %s".formatted(monitoringConfigHolder.getReconnectThreshold().get(), cmd.traceId(), cmd.resolution()));
         }
@@ -123,7 +123,7 @@ public class DelayMonitoringWorker {
 
             log.info("재시도 성공. 상태를 다시 MONITORING으로 변경하고 모니터링 큐로 보냅니다.");
             // 재시도 성공 시, 다시 MONITORING 상태로 변경
-            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.MONITORING);
+            programStatusCommand = new ProgramStatusCommand(cmd.traceId(), cmd.resolution(), ResolutionStatus.MONITORING, cmd.bandWidth());
             rabbit.convertAndSend(RabbitNames.EX_PROGRAM_COMMAND, RabbitNames.RK_PROGRAM_COMMAND, programStatusCommand);
             rabbit.convertAndSend(RabbitNames.EX_MONITORING, RabbitNames.RK_WORK, cmd);
         }
@@ -133,10 +133,15 @@ public class DelayMonitoringWorker {
             log.warn("재시도 실패 ({}). {}ms 후 다시 시도합니다. Error: {}, {} , {}, {}", nextAttempt, delayMillis, e.getMessage(), cmd.traceId(), cmd.resolution(), cmd.mediaUrl());
 
             // 실패 시, EX_DELAY를 통해 재시도 딜레이 큐로 메시지를 보냄
-            rabbit.convertAndSend(RabbitNames.EX_DELAY, RabbitNames.RK_RETRY_DELAY_1S, m, msg -> {
-                msg.getMessageProperties().setExpiration(String.valueOf(delayMillis));
-                return msg;
-            });
+            try {
+                rabbit.convertAndSend(RabbitNames.EX_DELAY, RabbitNames.RK_RETRY_DELAY, m, msg -> {
+                    msg.getMessageProperties().setExpiration(String.valueOf(delayMillis));
+                    return msg;
+                });
+            } catch (Exception sendException) {
+                log.error("재시도 메시지를 큐에 다시 넣는 데 실패했습니다. 메시지가 유실될 수 있습니다. 원인: {}", sendException.getMessage(), sendException);
+                throw new AmqpRejectAndDontRequeueException("재시도 메시지 전송 실패", sendException);
+            }
         }
         finally {
             redisService.deleteValues(lockKey);

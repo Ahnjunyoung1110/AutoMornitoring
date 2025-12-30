@@ -27,7 +27,7 @@ public class ProbeWorker {
     private final RabbitTemplate rabbit;
     private final RedisService redisService;
 
-    @RabbitListener(queues = RabbitNames.Q_STAGE1,
+    @RabbitListener(queues = RabbitNames.Q_FFMPEG,
             concurrency = "3")
     public void handle(FfmpegCommand cmd){
         ProbeDTO responseDTO;
@@ -42,7 +42,7 @@ public class ProbeWorker {
                 log.info(String.valueOf(dto));
                 DbCreateProbeCommand newCmd = new DbCreateProbeCommand(cmd.traceId(), dto.get());
 
-                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, newCmd);
+                rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STORAGE, newCmd);
             }
 
             // 동일한 master url 로 sub를 갱신하는 경우
@@ -54,7 +54,7 @@ public class ProbeWorker {
                     log.info(String.valueOf(dto));
                     DbRefreshProbeCommand newCmd = new DbRefreshProbeCommand(cmd.traceId(), dto.get());
 
-                    rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STAGE2, newCmd);
+                    rabbit.convertAndSend(RabbitNames.EX_PROVISIONING, RabbitNames.RK_STORAGE, newCmd);
                 } catch (ProgramNotFoundException e) {
                     log.warn("Program not found. 드랍합니다. traceId={}", c.traceId(), e);
                 }
