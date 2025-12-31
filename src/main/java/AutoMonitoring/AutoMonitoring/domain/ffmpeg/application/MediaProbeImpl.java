@@ -58,6 +58,8 @@ public class MediaProbeImpl implements MediaProbe {
             String channelId = queryParams.get("channel_id");
             String tp = queryParams.get("tp");
 
+
+
             try {
                 if (channelName != null) channelName = URLDecoder.decode(channelName, StandardCharsets.UTF_8);
                 if (channelId != null) channelId = URLDecoder.decode(channelId, StandardCharsets.UTF_8);
@@ -153,6 +155,19 @@ public class MediaProbeImpl implements MediaProbe {
 
             // 4) 마스터 m3u8 파싱 → variants
             List<VariantDTO> variants = parseMasterM3u8(escapedUrl);
+
+            // 해당 경우는 ads가 붙지 않은 경우까지 고려하는것(해당 경우는 param에 tp, channelId, channelName이 존재하지 않음)
+            if(channelName == null && channelId == null && tp == null){
+                String uriStr = variants.getFirst().uri();
+
+                var queryParamsInSub = UriComponentsBuilder.fromUriString(uriStr)
+                        .build()
+                        .getQueryParams();
+
+                channelName = queryParamsInSub.getFirst("channelname");
+                channelId = queryParamsInSub.getFirst("channelid");
+                tp = queryParamsInSub.getFirst("targetplatform");
+            }
 
             // 5) ProbeDTO 생성
             return ProbeDTO.builder()

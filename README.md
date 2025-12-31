@@ -125,39 +125,41 @@
 
 - Docker
 - Docker Compose
-- FFmpeg (ffprobe 포함, 필수)
+- Java 21 (IDE에서 직접 실행 시 필요)
 
-> **중요**: 현재 구현상 ffprobe는 **호스트 OS에 설치**되어 있어야 하며, Spring 애플리케이션에서 직접 실행됩니다.
+> **참고**: 모든 필수 구성 요소(Java, RabbitMQ, MySQL, Redis, FFmpeg)는 Docker Compose 설정에 포함되어 있어 `docker compose up`으로 실행 시 별도의 설치가 필요 없습니다.
 
 ---
 
-## 7. FFmpeg 설치 (ffprobe 포함)
+## 7. FFmpeg/ffprobe 정보
 
-### macOS (Homebrew)
+`docker compose`를 사용하여 프로젝트를 실행하는 경우, **호스트(사용자 PC)에 FFmpeg를 설치할 필요가 없습니다.**
 
+- `Dockerfile`은 애플리케이션 이미지 내에 `ffmpeg`와 `ffprobe`를 자동으로 포함하여 빌드합니다. (멀티 스테이지 빌드 사용)
+- 모든 스트림 분석은 컨테이너 내부에서 실행됩니다.
+
+### 로컬 개발 환경에서 직접 실행 시
+
+IDE에서 Spring Boot 애플리케이션을 직접 실행하는 경우에만 아래와 같이 `ffmpeg`를 수동으로 설치해야 합니다.
+
+#### macOS (Homebrew)
 ```bash
 brew install ffmpeg
 ffprobe -version
 ```
 
-### Ubuntu / Debian
-
+#### Ubuntu / Debian
 ```bash
 sudo apt update
 sudo apt install -y ffmpeg
 ffprobe -version
 ```
 
-### Windows
-
+#### Windows
 1. FFmpeg 공식 사이트 접속: https://ffmpeg.org/download.html
 2. Windows용 FFmpeg 다운로드 후 압축 해제
 3. `ffmpeg/bin` 디렉토리를 **환경 변수 PATH**에 추가
-4. 새 터미널에서 아래 명령으로 확인
-
-```powershell
-ffprobe -version
-```
+4. 새 터미널에서 `ffprobe -version` 명령으로 설치를 확인합니다.
 
 ---
 
@@ -171,6 +173,16 @@ docker compose up -d --build
 
 - **Web Dashboard**: http://localhost:8080
 - **RabbitMQ Management UI**: http://localhost:15672
+
+### 인프라 서비스만 실행 (로컬 개발용)
+
+Spring Boot 애플리케이션을 IDE에서 직접 실행하려는 경우, 인프라 서비스(MySQL, RabbitMQ, Redis)만 Docker Compose로 실행할 수 있습니다.
+
+```bash
+docker compose -f compose-infra.yaml up -d
+```
+
+이후 IDE에서 Spring Boot 애플리케이션을 `prod` 또는 `dev` 프로파일로 실행하면 됩니다.
 
 ---
 
